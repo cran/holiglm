@@ -1,7 +1,7 @@
 Package: holiglm
 Type: Package
 Title: Holistic Generalized Linear Models
-Version: 0.2
+Version: 0.2.1
 Authors@R: c(
     person("Benjamin", "Schwendinger", role = c("aut", "cre"), email = "benjaminschwe@gmail.com"),
     person("Florian", "Schwendinger", role = "aut"),
@@ -16,10 +16,10 @@ URL: https://arxiv.org/abs/2205.15447
 RoxygenNote: 7.1.2
 Additional_repositories: https://ben-schwen.github.io/drat/
 NeedsCompilation: no
-Packaged: 2022-06-06 08:55:40 UTC; bschwendinger
+Packaged: 2022-06-11 21:07:47 UTC; bschwendinger
 Author: Benjamin Schwendinger [aut, cre],
   Florian Schwendinger [aut],
   Laura Vana [aut]
 Maintainer: Benjamin Schwendinger <benjaminschwe@gmail.com>
 Repository: CRAN
-Date/Publication: 2022-06-08 08:20:02 UTC
+Date/Publication: 2022-06-13 15:30:02 UTC

@@ -213,7 +213,7 @@ approx_inverse <- function(x, family) {
 choose_solver <- function(solver, family, is_mip = NULL, is_conic = FALSE) {
     if (isTRUE(solver == "auto")) {
         if (!is_conic && isTRUE(family[["family"]] == "gaussian") && isTRUE(family[["link"]] == "identity")) {
-            solvers <- c("gurobi", "cplex", "ecos", "mosek")
+            solvers <- c("ecos", "gurobi", "cplex", "mosek")
             if (!isTRUE(is_mip) && !is.null(is_mip)) {
                 solvers <- c(solvers, "qpoases", "quadprog")
             }
@@ -553,7 +553,7 @@ new_hglm_fit <- function(model, roi_solution) {
     nulldf <- n.ok - as.integer(intercept)
 
     iter <- niter(roi_solution)
-    qr_tolerance <- 1e-11  # glm uses # min(1e-07, control$epsilon / 1000)
+    qr_tolerance <- 1e-07  # glm uses # min(1e-07, control$epsilon / 1000)
     qr <- qr.default(x[, is_active, drop = FALSE] * w, qr_tolerance, LAPACK = FALSE)
     effects <- qr.qty(qr, z * w)
     qr$tol <- qr_tolerance

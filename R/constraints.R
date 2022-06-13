@@ -54,6 +54,7 @@ assert_kvars <- function(kvars) {
 #' @return A holistic generalized model constraint, object inheriting from class \code{"hglmc"}.
 #' @family Constraint-Constructors
 #' @examples
+#' set.seed(0)
 #' dat <- rhglm(100, c(1, 2, -3, 4, 5, -6))
 #' constraints <- lower(c(x2 = 0, x5 = 1))
 #' hglm(y ~ ., constraints = constraints, data = dat)
