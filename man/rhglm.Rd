@@ -41,4 +41,10 @@ A simple data generator for testing and example purposes.
 }
 \examples{
 rhglm(10, 1:5)
+rhglm(10, 1:5, family = binomial())
 }
+\seealso{
+Other simulation: 
+\code{\link{cov_matrix}()}
+}
+\concept{simulation}

@@ -248,3 +248,73 @@ active_coefficients.hglm.fit <- active_coefficients.hglm
 #' @export
 acoef <- active_coefficients
 
+#' Extract Model Coefficients
+#'
+#' The function returns different types of coefficients for a model.
+#'
+#' @details
+#' The types \code{"scaled"} and \code{"unscaled"} refer to the coefficients
+#'  of the scaled/unscaled optimization problem. Type \code{"selected"} refers
+#'  to the active coefficients in the model \code{\link{active_coefficients}}.
+#'
+#' @param object an object inheriting from \code{"hglm"} or \code{"hglm.fit"}
+#'  from which the coefficients are obtained from.
+#' @param type Default value is \code{"unscaled"}. Allowed values are
+#'  \code{"unscaled"}, \code{"scaled"} and \code{"selected"}.
+#' @param ... optional arguments currently ignored.
+#' @return a vector containing the unscaled, scaled or selected coefficients.
+#' @rdname coef.hglm
+#' @examples
+#' dat <- rhglm(1000, 1:3)
+#' fit <- hglm(y ~ ., data = dat)
+#' coef(fit)
+#' coef(fit, type="scaled")
+#' coef(fit, type="selected")
+#' @export
+coef.hglm <- function(object, type = c("unscaled", "scaled", "selected"), ...) {
+    type = match.arg(type)
+    if (type == "scaled") {
+        no_scaling <- length(object[["hglm_model"]][["scaler"]]) && object[["hglm_model"]][["scaler"]] == "off"
+        if (no_scaling) warning("No scaling was used.")
+        return(object[["coefficients_scaled"]])
+    }
+    if (type == "selected") return(object[["coefficients.selected"]])
+    object[["coefficients"]]
+}
+
+#' @noRd
+#' @export
+coef.hglm.fit <- coef.hglm
+
+
+# Extract Response from a Model Frame
+#
+# Extracts the response from a model frame. A simple wrapper around
+# \code{\link[stats]{model.response}} which adds the class information
+# \code{"model_response"}.
+#
+# @param data a model frame.
+# @param type a character string giving the storage type of the
+#             extracted object. Possible values are \code{"any"},
+#             \code{"numeric"} and \code{"double"}.
+#
+# @seealso
+# \code{\link[stats]{model.response}}
+#
+# @return
+# Returns the model response.
+model_response <- function(data, type = "any") {
+    response <- model.response(data = data, type = type)
+    class(response) <- c("model_response", class(response))
+    response
+}
+
+
+# Build Model Matrix
+model_matrix <- function(object, data = environment(object),
+                         contrasts.arg = NULL, xlev = NULL, ...) {
+    mm <- model.matrix.default(object = object, data = data,
+                               contrasts.arg = contrasts.arg, xlev = xlev, ...)
+    class(mm) <- c("model_matrix", class(mm))
+    mm
+}

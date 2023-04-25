@@ -29,6 +29,6 @@ where the solver signaled an issue.}
 the extracted solution.
 }
 \description{
-The solution of the underlying optimization problem, 
+The solution of the underlying optimization problem,
  can be accessed via the method \code{'solution'}.
 }

@@ -1,0 +1,567 @@
+---
+title: "Extending the holiglm package"
+date: "2023-04-24"
+output: 
+  rmarkdown::html_vignette:
+    number_sections: true
+    toc: true
+    toc_depth: 2
+bibliography: holiglm.bib
+link-citations: yes
+vignette: >
+  %\VignetteIndexEntry{Extending the holiglm package}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+
+
+This document shows how to extend the **holiglm** package with new
+likelihood / objective functions or constraints. To extend the **holiglm** package
+users are required to be familiar with the **ROI** package [@roi:theussl:2020]. 
+Additional examples and information about **ROI** can be found on the
+[**ROI**-homepage](https://roi.r-forge.r-project.org/).
+
+
+
+```r
+Sys.setenv(ROI_LOAD_PLUGINS = FALSE)
+library("slam")
+library("ROI")
+#> ROI: R Optimization Infrastructure
+#> Registered solver plugins: nlminb.
+#> Default solver: auto.
+library("holiglm")
+#> Loading required package: ROI.plugin.ecos
+```
+
+For illustration purposes we will make use of the `Default` data set in package
+**ISLR** [@pkg:ISLR], to which we add two more columns `rand_1` and `rand_2` containing 
+variables unrelated to the response.
+
+
+```r
+data("Default", package = "ISLR")
+Default[["rand_1"]] <- rnorm(nrow(Default))
+Default[["rand_2"]] <- rnorm(nrow(Default))
+```
+
+
+# Using unsupported constraints
+Currently **holiglm** supports a set of specific constraints from the
+holistic regression literature and general linear constraints.
+However, it is possible to specify custom constraints, as long as 
+they are supported by a linear, quadratic or conic optimization
+solver available from **ROI**.
+
+When implementing new constraints it is important that the scaling
+of the model matrix is considered.
+There are two options to account for the scaling,   
+
+1. turn off the internal scaling or
+2. modify the constraints such that they are consistent with the internal scaling.
+
+In the following we show, how to implement a linear constraint
+and custom conic constraint, with and without scaling.
+
+
+## Without scaling
+When adding custom constraints to the model, the scaling of the
+model matrix has to be considered.
+The main purpose of the scaling is to simplify the choice of
+the big-M constraints. Therefore, if no sparsity constraint
+is imposed on the model the easiest way to add additional
+constraints is to turn off the scaling and add the constraints
+to the model object. In the following example we show how
+this can be accomplished for linear constraints.
+
+### Linear constraint
+The **holiglm** package allows to impose linear constraints on the
+coefficients and the indicator variables of the coefficients via
+the `linear()` function. However, to start with a simple example
+we will add linear constraints to the model without using the `linear()`
+function.
+
+Let us assume we want to impose the constraint that the coefficients of 
+variables `balance` and `income` are equal.
+This can be easily accomplished by, 
+
+1. obtaining the model object,
+2. altering the model object and
+3. fitting the altered model.
+
+
+To obtain the model object, function `hglm()` with parameter
+`dry_run` set to `TRUE` can be used.
+
+
+```r
+model <- hglm(default ~ ., binomial(), scaler = "off", data = Default, dry_run = TRUE)
+model[["constraints"]]
+#> list()
+```
+
+Since the scaling is turned off, the constraint
+can be added by adding the corresponding **ROI** constraint.
+Note, the variables `"balance"` and `"income"` are on the 3rd and 4th position
+in the model matrix.
+
+```r
+match(c("balance", "income"), colnames(model[["x"]]))
+#> [1] 3 4
+```
+Therefore, we impose the constraints on the 3rd and 4th column of the constraint
+matrix.
+
+```r
+L <- matrix(c(0, 0, 1, -1), 1)
+model[["constraints"]][[1]] <- L_constraint(L, "==", 0)
+```
+
+To solve the altered model, function `hglm_fit()` can be used.
+
+```r
+hglm_fit(model)
+#> Error in as.OP.hglm_model(x = model): dimension missmatch in as.OP
+```
+Looking at the output above shows that `balance` and `income` have now the
+same coefficient as required by the constraint. However, it seems important
+to point out that for linear constraints it is typically easier to
+use the `linear()` function directly.
+
+```r
+fit <- hglm(default ~ ., binomial(), data = Default,
+            constraints = linear(c(balance = 1, income = -1), "==", 0))
+#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
+fit
+#> 
+#> Call:  hglm(formula = default ~ ., family = binomial(), data = Default, 
+#>     constraints = linear(c(balance = 1, income = -1), "==", 0))
+#> 
+#> Coefficients:
+#> (Intercept)   studentYes      balance       income       rand_1       rand_2  
+#>  -4.357e+00    8.669e-01    2.039e-05    2.039e-05   -4.784e-02    3.914e-02  
+#> 
+#> Degrees of Freedom: 9999 Total (i.e. Null);  9994 Residual
+#> Null Deviance:	    2921 
+#> Residual Deviance: 2898 	AIC: 2910
+```
+
+Looking more closely at the constraints,
+
+```r
+model_1 <- hglm(default ~ ., binomial(), data = Default, dry_run = TRUE,
+                constraints = linear(c(balance = 1, income = -1), "==", 0))
+c(ncol(L_constraint(L, "==", 0)[["L"]]), ncol(model_1[["constraints"]][[1]][["L"]]))
+#> [1]     4 20011
+```
+it is easy to recognize that the dimension of 4 of the linear constraint specified above 
+is not equal to the dimension of the constraint obtained by using `linear()` directly in `hglm()`. This happens due to the auxiliary variables which enter the problem when specifing the likelihood function. However,  this is no problem 
+since the dimensions of the constraints are internally matched when `as.OP`
+is called. 
+
+<!-- LV: I think we don't need this last part -->
+<!-- Alternatively, one could also transform the problem into a -->
+<!-- **ROI** optimization problem and solve via `ROI_solve` -->
+<!-- ```{r} -->
+<!-- op <- as.OP(model_1) -->
+<!-- sol <- ROI_solve(op) -->
+<!-- head(solution(sol), ncol(model_1[["x"]])) -->
+<!-- ``` -->
+<!-- however it is typically more convenient to call `hglm_fit`. -->
+
+
+### Non-linear constraint
+This example shows how to add the non-linear constraint 
+$\sqrt{\beta_{\text{balance}}^2 + \beta_{\text{income}}^2} \leq 1$ to the model.
+To demonstrate the effect of the constraint we scale the credit default data,
+such that the coefficients of `balance` and `income` are both bigger than one.
+
+<!-- LV: We do we need another random variable when we have rand_1 and rand_2? -->
+
+```r
+credit_default <- Default
+credit_default[, 3] <- credit_default[, 3] / 1000
+credit_default[, 4] <- credit_default[, 4] / 1000000
+credit_default[["random"]] <- rnorm(nrow(credit_default))
+glm(default ~ ., family = binomial(), data = credit_default)
+#> 
+#> Call:  glm(formula = default ~ ., family = binomial(), data = credit_default)
+#> 
+#> Coefficients:
+#> (Intercept)   studentYes      balance       income       rand_1       rand_2       random  
+#>   -10.88340     -0.63742      5.73652      3.23051     -0.06304      0.03268      0.06083  
+#> 
+#> Degrees of Freedom: 9999 Total (i.e. Null);  9993 Residual
+#> Null Deviance:	    2921 
+#> Residual Deviance: 1570 	AIC: 1584
+```
+
+The constraint $\sqrt{\beta_{\text{balance}}^2 + \beta_{\text{income}}^2} \leq 1$ can be modeled by making use
+of the second order cone, 
+
+```r
+C <- rbind(c(0, 0, 0, 0), c(0, 0, -1, 0), c(0, 0, 0, -1))
+socp <- C_constraint(C, K_soc(3), c(1, 0, 0))
+```
+
+Similar to adding linear constraints, first the model has to be generated,
+
+
+```r
+model_2 <- hglm(default ~ ., binomial(), scaler = "off",
+                data = credit_default, dry_run = TRUE)
+```
+afterwards the constraint can be added
+
+```r
+model_2[["constraints"]][[1]] <- socp
+```
+
+and the model can be fit via the `hglm_fit()` function.
+
+
+```r
+fit <- hglm_fit(model_2, solver = "ecos")
+#> Error in as.OP.hglm_model(x = model): dimension missmatch in as.OP
+coef(fit)
+#>   (Intercept)    studentYes       balance        income        rand_1        rand_2 
+#> -4.357400e+00  8.668843e-01  2.039058e-05  2.039058e-05 -4.784277e-02  3.913994e-02
+```
+
+Calculating $\sqrt{\beta_{\text{balance}}^2 + \beta_{\text{income}}^2} \leq 1$ 
+
+```r
+sqrt(sum(coef(fit)[c("balance", "income")]^2))
+#> [1] 2.883664e-05
+```
+verifies that the constraint is fulfilled.
+
+## With scaling
+
+### Linear constraint
+In this example we combine the sparsity constraint that at most $3$ features
+are selected with the linear constraint $\beta_\text{balance} = \beta_\text{income}$.
+Using `hglm()`, this model can be estimated by:
+
+```r
+constraints <- c(k_max(3), linear(c(balance = 1, income = -1), "==", 0))
+model_3 <- hglm(default ~ ., binomial(), constraints = constraints,
+                data = Default, dry_run = TRUE)
+model_3[["constraints"]]
+#> $bigM
+#> An object containing 10 linear constraints.
+#> 
+#> $global_sparsity_1
+#> An object containing 1 linear constraint.
+#> 
+#> $linear_constraint_1
+#> An object containing 1 linear constraint.
+```
+
+Inspecting the linear constraint, 
+
+```r
+str(model_3[["constraints"]][["linear_constraint_1"]])
+#> List of 4
+#>  $ L    :List of 6
+#>   ..$ i       : int [1:2] 1 1
+#>   ..$ j       : int [1:2] 3 4
+#>   ..$ v       : num [1:2] 3.77e-04 -1.37e-05
+#>   ..$ nrow    : int 1
+#>   ..$ ncol    : int 20011
+#>   ..$ dimnames: NULL
+#>   ..- attr(*, "class")= chr "simple_triplet_matrix"
+#>  $ dir  : chr "=="
+#>  $ rhs  : num 0
+#>  $ names: NULL
+#>  - attr(*, "n_L_constraints")= int 1
+#>  - attr(*, "class")= chr [1:3] "L_constraint" "Q_constraint" "constraint"
+```
+shows that `hglm()` internally scales the coefficient matrix of the linear
+constraint based on the scaling of the model matrix. To scale
+the linear constraint matrix outside of the `hglm` function, the 
+`scale_constraint_matrix` function can be used.
+
+
+```r
+model_4 <- hglm(default ~ ., binomial(), constraints = k_max(3),
+                data = Default, dry_run = TRUE)
+L <- matrix(c(0, 0, 1, -1, 0, 0), 1)
+L <- scale_constraint_matrix(L, attr(model_4[["x"]], "xs"), attr(model_4[["y"]], "ys"))
+model_4[["constraints"]][["linear_constraint_1"]] <- L_constraint(L, "==", 0)
+hglm_fit(model_4)
+#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
+#> 
+#> Call:  NULL
+#> 
+#> Coefficients:
+#> (Intercept)   studentYes      balance       income       rand_1       rand_2  
+#>  -4.358e+00    8.672e-01    2.044e-05    2.044e-05    0.000e+00    0.000e+00  
+#> 
+#> Degrees of Freedom: 9999 Total (i.e. Null);  9996 Residual
+#> Null Deviance:	    2921 
+#> Residual Deviance: 2899 	AIC: 2907
+```
+
+Again, it can be easily verified, that calling `hglm()`  directly gives the
+same solution.
+
+
+```r
+constraints <- c(k_max(3), linear(c(balance = 1, income = -1), "==", 0))
+hglm(default ~ ., binomial(), constraints = constraints, data = Default)
+#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
+#> 
+#> Call:  hglm(formula = default ~ ., family = binomial(), data = Default, 
+#>     constraints = constraints)
+#> 
+#> Coefficients:
+#> (Intercept)   studentYes      balance       income       rand_1       rand_2  
+#>  -4.358e+00    8.672e-01    2.044e-05    2.044e-05    0.000e+00    0.000e+00  
+#> 
+#> Degrees of Freedom: 9999 Total (i.e. Null);  9996 Residual
+#> Null Deviance:	    2921 
+#> Residual Deviance: 2899 	AIC: 2907
+```
+
+
+### Non-linear constraint
+This example shows how to add the non-linear constraint $\sqrt{\beta_{\text{balance}}^2 + \beta_{\text{income}}^2} \leq 1$. Similar to the linear constraint we first generate the model,
+
+```r
+constraints <- c(k_max(3), linear(c(balance = 1, income = -1), "==", 0))
+model_5 <- hglm(default ~ ., binomial(), constraints = constraints,
+                data = credit_default, dry_run = TRUE)
+```
+
+formulate the constraint
+
+
+```r
+nvars <- ncol(model_5[["x"]])
+C <- simple_triplet_matrix(c(2, 3), c(3, 4), c(-1, -1), ncol = nvars)
+C <- scale_constraint_matrix(C, attr(model_5[["x"]], "xs"), attr(model_5[["y"]], "ys"))
+socp <- C_constraint(C, K_soc(3), c(1, 0, 0))
+```
+
+and add it to the model.
+
+
+```r
+model_5[["constraints"]][["socp_constraint_1"]] <- socp
+fit <- hglm_fit(model_5)
+#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
+coef(fit)
+#> (Intercept)  studentYes     balance      income      rand_1      rand_2      random 
+#>  -4.1311607   0.2670113   0.7071068   0.7071068   0.0000000   0.0000000   0.0000000
+sum(coef(fit)[3:4]^2)
+#> [1] 1
+```
+
+
+# Using unsupported likelihood / objective functions
+
+In this section we show how to implement additional currently unsupported
+objectives. This can be structured into 5 steps,
+
+1. Verify that the desired objective / likelihood function can be represented via linear, quadratic or conic optimization and solved with a solver available from
+**ROI**.
+2. Implement a function which takes as input the model matrix $x$, the response $y$
+and optional arguments and returns a **ROI** `OP()` which can be solved by a mixed integer solver. Here the first $p+1$ variables of the optimization problem should correspond to $\beta_0, ..., \beta_p$.
+3. Create the model object by calling `hglm()` with parameter `dry_run` set to `TRUE`.
+4. Replace the `"loglikelihood"` with the new objective.
+5. Use `hglm_fit` to fit the model.
+
+
+## Can my problem be solved by conic optimization?
+
+## Example LAD
+
+### Verify problem can be expressed as conic optimization problem
+
+The least absolute deviation regression problem is defined as,
+$$
+\underset{\boldsymbol\beta}{\text{minimize }} ~~ || \boldsymbol y - X\boldsymbol \beta ||_1
+$$
+
+which can be solved via linear programming.
+
+### Implement objective function
+Often the following reformulation is used, 
+\begin{array}{rll}
+  \underset{\boldsymbol{\beta}, ~ \boldsymbol{e}^+, ~ \boldsymbol{e}^-}{\text{minimize}} &
+  \sum_{i=1}^n e_i^+ + e_i^- \\
+
+  \text{subject to} &
+  \boldsymbol{x}^\top_i \boldsymbol{\beta} + e_i^+ - e_i^- = y_i &
+  i = 1, \ldots{}, n \\
+
+  &
+  e_i^+, e_i^- \geq 0 &
+  i = 1,\ldots{},n
+\end{array}
+see, e.g., [@Charnes:1955].
+
+```r
+lad_a <- function(x, y) {
+    D <- diag(nrow(x))
+    L <- rbind(cbind( x, -D),
+               cbind(-x, -D))
+    obj <- c(double(ncol(x)), rep.int(1, nrow(x)))
+    OP(objective = L_objective(obj),
+       constraints = L_constraint(L, leq(2 * nrow(x)), c(y, -y)),
+       bounds = V_bound(ld = -Inf, nobj = length(obj)))
+}
+```
+
+Alternatively, the LAD can be reformulated to
+\begin{array}{rll}
+  \underset{\boldsymbol{\beta}, ~ \boldsymbol{\gamma}}{\text{minimize}} &
+  \sum_{i=1}^n \gamma_i \\
+
+  \text{subject to} &
+  -\gamma_i \leq \boldsymbol{x}^\top_i \boldsymbol{\beta} \leq \gamma_i &
+  i = 1, \ldots{}, n
+\end{array}
+
+
+```r
+lad_b <- function(x, y) {
+    obj <- L_objective(c(double(ncol(x)), rep.int(1, 2 * nrow(x))))
+    D <- diag(nrow(x))
+    con <- L_constraint(L = cbind(x, D, -D), dir = eq(nrow(x)), rhs = y)
+    bou <- V_bound(li = seq_len(ncol(x)), lb = rep.int(-Inf, ncol(x)), nobj = length(obj))
+    OP(objective = obj, constraints = con, bounds = bou)
+}
+```
+
+### Create model object
+Third we create the model object,
+
+
+```r
+model_a <- model_b <- hglm(mpg ~ cyl + disp + hp + drat + wt, data = mtcars, dry_run = TRUE)
+```
+
+### Replace likelihood
+
+```r
+model_a <- update_objective(model_a, lad_a(model_a$x, model_a$y))
+```
+
+
+```r
+model_b <- update_objective(model_b, lad_b(model_b$x, model_b$y))
+```
+
+### Fit model 
+Fitting the model gives
+
+```r
+hglm_fit(model_a)
+#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
+#> 
+#> Call:  NULL
+#> 
+#> Coefficients:
+#> (Intercept)          cyl         disp           hp         drat           wt  
+#>    40.19297     -1.13698      0.01174     -0.02853     -0.08884     -3.63177  
+#> 
+#> Degrees of Freedom: 31 Total (i.e. Null);  26 Residual
+#> Null Deviance:	    1126 
+#> Residual Deviance: 180.2 	AIC: 160.1
+hglm_fit(model_b)
+#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
+#> 
+#> Call:  NULL
+#> 
+#> Coefficients:
+#> (Intercept)          cyl         disp           hp         drat           wt  
+#>    40.19297     -1.13698      0.01174     -0.02853     -0.08884     -3.63177  
+#> 
+#> Degrees of Freedom: 31 Total (i.e. Null);  26 Residual
+#> Null Deviance:	    1126 
+#> Residual Deviance: 180.2 	AIC: 160.1
+```
+
+the same result as package **quantreg**.
+
+
+```r
+if (require("quantreg", quietly = TRUE)) {
+    fm <- quantreg::rq(mpg ~ cyl + disp + hp + drat + wt, data = mtcars)
+    coef(fm)
+}
+#> 
+#> Attaching package: 'SparseM'
+#> The following object is masked from 'package:base':
+#> 
+#>     backsolve
+#> (Intercept)         cyl        disp          hp        drat          wt 
+#> 40.19297107 -1.13697880  0.01174166 -0.02852600 -0.08883949 -3.63176521
+```
+
+Note constraints can be added during the fit using the `constraints` argument,
+
+```r
+constraints <- c(k_max(3))
+(fit_a <- hglm_fit(model_a, constraints = constraints))
+#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
+#> 
+#> Call:  NULL
+#> 
+#> Coefficients:
+#> (Intercept)          cyl         disp           hp         drat           wt  
+#>    38.33674     -1.13592      0.00000     -0.01475      0.00000     -3.01449  
+#> 
+#> Degrees of Freedom: 31 Total (i.e. Null);  28 Residual
+#> Null Deviance:	    1126 
+#> Residual Deviance: 190.7 	AIC: 157.9
+(fit_b <- hglm_fit(model_b, constraints = constraints))
+#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
+#> 
+#> Call:  NULL
+#> 
+#> Coefficients:
+#> (Intercept)          cyl         disp           hp         drat           wt  
+#>    38.33674     -1.13592      0.00000     -0.01475      0.00000     -3.01449  
+#> 
+#> Degrees of Freedom: 31 Total (i.e. Null);  28 Residual
+#> Null Deviance:	    1126 
+#> Residual Deviance: 190.7 	AIC: 157.9
+```
+
+
+
+```r
+model <- model_a
+constraints <- c(k_max(3), lower(c(cyl = 3)))
+hglm_fit(model_a, constraints = constraints)
+#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
+#> 
+#> Call:  NULL
+#> 
+#> Coefficients:
+#> (Intercept)          cyl         disp           hp         drat           wt  
+#>     32.8727       3.0000       0.0000      -0.0763       0.0000      -6.4791  
+#> 
+#> Degrees of Freedom: 31 Total (i.e. Null);  28 Residual
+#> Null Deviance:	    1126 
+#> Residual Deviance: 519 	AIC: 190
+hglm_fit(model_b, constraints = constraints)
+#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
+#> 
+#> Call:  NULL
+#> 
+#> Coefficients:
+#> (Intercept)          cyl         disp           hp         drat           wt  
+#>     32.8727       3.0000       0.0000      -0.0763       0.0000      -6.4791  
+#> 
+#> Degrees of Freedom: 31 Total (i.e. Null);  28 Residual
+#> Null Deviance:	    1126 
+#> Residual Deviance: 519 	AIC: 190
+```
+
+
+# References

@@ -20,6 +20,18 @@ Set a upper bound on the coefficient of specific covariates.
 dat <- rhglm(100, c(1, 2, -3, 4, 5, -6))
 constraints <- upper(c(x1 = 0, x4 = 1))
 hglm(y ~ ., constraints = constraints, data = dat)
+
+}
+\references{
+McDonald, J. W., & Diamond, I. D. (1990).
+On the Fitting of Generalized Linear Models with Nonnegativity Parameter Constraints.
+Biometrics, 46 (1): 201–206.
+\doi{10.2307/2531643}
+
+Slawski, M., & Hein, M. (2013).
+Non-negative least squares for high-dimensional linear models: Consistency and sparse recovery without regularization.
+Electronic Journal of Statistics, 7: 3004-3056.
+\doi{10.1214/13-EJS868}
 }
 \seealso{
 Other Constraint-Constructors: 

@@ -32,6 +32,9 @@ An object of class \code{"hglm_model"}.
 \description{
 Create a HGLM model object.
 }
+\details{
+No standardization prior to fitting the model takes place. If a x or y standardization is wanted, the user has to do this beforehand.
+}
 \examples{
 dat <- rhglm(100, c(1, 2, -3, 4, 5, -6))
 x <- model.matrix(y ~ ., data = dat)

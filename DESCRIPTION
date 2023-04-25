@@ -1,25 +1,27 @@
 Package: holiglm
 Type: Package
 Title: Holistic Generalized Linear Models
-Version: 0.2.1
+Version: 0.2.5
 Authors@R: c(
     person("Benjamin", "Schwendinger", role = c("aut", "cre"), email = "benjaminschwe@gmail.com"),
     person("Florian", "Schwendinger", role = "aut"),
     person("Laura", "Vana", role = "aut")
   )
-Description: Holistic generalized linear models (HGLMs) extend generalized linear models (GLMs) by enabling the possibility to add further constraints to the model. The 'holiglm' package simplifies estimating HGLMs using convex optimization.
+Description: Holistic generalized linear models (HGLMs) extend generalized linear models (GLMs) by enabling the possibility to add further constraints to the model. The 'holiglm' package simplifies estimating HGLMs using convex optimization. Additional information about the package can be found in the reference manual, the 'README' and the accompanying paper <doi:10.48550/arXiv.2205.15447>.
 Depends: R (>= 3.5.0), ROI.plugin.ecos
 Imports: slam, checkmate, MASS, SuppDists, ROI (>= 0.3-0)
-Suggests: ROI.plugin.mosek, ROI.plugin.scs, tinytest (>= 1.0.0)
+Encoding: UTF-8
+Suggests: ROI.plugin.scs, tinytest (>= 1.0.0), parallel, knitr,
+        rmarkdown, bookdown, DiagrammeR
 License: GPL-3
 URL: https://arxiv.org/abs/2205.15447
-RoxygenNote: 7.1.2
-Additional_repositories: https://ben-schwen.github.io/drat/
+VignetteBuilder: knitr
+RoxygenNote: 7.2.3
 NeedsCompilation: no
-Packaged: 2022-06-11 21:07:47 UTC; bschwendinger
+Packaged: 2023-04-24 14:22:56 UTC; bschwendinger
 Author: Benjamin Schwendinger [aut, cre],
   Florian Schwendinger [aut],
   Laura Vana [aut]
 Maintainer: Benjamin Schwendinger <benjaminschwe@gmail.com>
 Repository: CRAN
-Date/Publication: 2022-06-13 15:30:02 UTC
+Date/Publication: 2023-04-25 07:40:05 UTC

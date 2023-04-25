@@ -53,6 +53,16 @@ assert_kvars <- function(kvars) {
 #'        of the covariates in the model matrix. 
 #' @return A holistic generalized model constraint, object inheriting from class \code{"hglmc"}.
 #' @family Constraint-Constructors
+#' @references
+#' McDonald, J. W., & Diamond, I. D. (1990).
+#' On the Fitting of Generalized Linear Models with Nonnegativity Parameter Constraints.
+#' Biometrics, 46 (1): 201–206.
+#' \doi{10.2307/2531643}
+#'
+#' Slawski, M., & Hein, M. (2013).
+#' Non-negative least squares for high-dimensional linear models: Consistency and sparse recovery without regularization.
+#' Electronic Journal of Statistics, 7: 3004-3056.
+#' \doi{10.1214/13-EJS868}
 #' @examples
 #' set.seed(0)
 #' dat <- rhglm(100, c(1, 2, -3, 4, 5, -6))
@@ -79,10 +89,21 @@ lower <- function(kvars) {
 #'        of the covariates in the model matrix. 
 #' @return A holistic generalized model constraint, object inheriting from class \code{"hglmc"}.
 #' @family Constraint-Constructors
+#' @references
+#' McDonald, J. W., & Diamond, I. D. (1990).
+#' On the Fitting of Generalized Linear Models with Nonnegativity Parameter Constraints.
+#' Biometrics, 46 (1): 201–206.
+#' \doi{10.2307/2531643}
+#'
+#' Slawski, M., & Hein, M. (2013).
+#' Non-negative least squares for high-dimensional linear models: Consistency and sparse recovery without regularization.
+#' Electronic Journal of Statistics, 7: 3004-3056.
+#' \doi{10.1214/13-EJS868}
 #' @examples
 #' dat <- rhglm(100, c(1, 2, -3, 4, 5, -6))
 #' constraints <- upper(c(x1 = 0, x4 = 1))
 #' hglm(y ~ ., constraints = constraints, data = dat)
+#'
 #' @export
 upper <- function(kvars) {
     assert_numeric(kvars, any.missing = FALSE)
@@ -99,6 +120,11 @@ upper <- function(kvars) {
 #' @param on_big_m a logical indicating if the constraint should be imposed on the big-M related binary variables.
 #' @return A holistic generalized model constraint, object inheriting from class \code{"hglmc"}.
 #' @family Constraint-Constructors
+#' @references
+#' Lawson, C. L., & Hanson, R. J. (1995).
+#' Solving least squares problems. Society for Industrial and Applied Mathematics.
+#' Society for Industrial and Applied Mathematics.
+#' \doi{10.1137/1.9781611971217}
 #' @examples
 #' # vector constraint
 #' beta <- c(1, -2, 3)
@@ -112,6 +138,7 @@ upper <- function(kvars) {
 #' colnames(mat) <- c("x1", "x5")
 #' constraints <- c(linear(mat, c("==", "=="), c(-1, 3)), rho_max(1))
 #' hglm(y ~ ., data = dat, constraints = constraints)
+#'
 #' @export
 linear <- function(L, dir, rhs, on_big_m = FALSE) {
     assert_numeric(L, any.missing = FALSE)
@@ -262,7 +289,7 @@ group_equal <- function(vars) {
 
 #' Include Constraint
 #'
-#' Ensures that all covariates specified by \code{vars} have nonzero coefficients.
+#' Ensures that all covariates specified by \code{vars} coefficients are active.
 #'
 #' @param vars an integer vector specifying the indices for covariates which have to be in the model.
 #' @return A holistic generalized model constraint, object inheriting from class \code{"hglmc"}.
@@ -290,6 +317,11 @@ include <- function(vars) {
 #' @param eps a double giving the epsilon used to ensure that the constraint holds.
 #' @return A holistic generalized model constraint, object inheriting from class \code{"hglmc"}.
 #' @family Constraint-Constructors
+#' @references
+#' Carrizosa, E., Olivares-Nadal, A. V., & Ramírez-Cobo, P. (2020).
+#' Integer Constraints for Enhancing Interpretability in Linear Regression.
+#' SORT. Statistics and Operations Research Transactions, 44: 67-98.
+#' \doi{10.2436/20.8080.02.95}.
 #' @examples
 #' dat <- rhglm(100, c(1, -2, 3, 4, 5, 6))
 #' constraints <- sign_coherence(c("x1", "x3"))
@@ -325,11 +357,14 @@ sign_coherence <- function(vars, big_m = 100, eps = 1e-6) {
 #'            The parameter is passed to \code{\link[stats]{cor}},
 #'            therefore see \code{\link[stats]{cor}} for more information.
 #' @return A holistic generalized model constraint, object inheriting from class \code{"hglmc"}.
+#' @examples
+#' constraints <- c(k_max(7), pairwise_sign_coherence())
 #' @family Constraint-Constructors
 #' @references
-#' Carrizosa E, Olivares-Nadal AV, Ramirez-Cobo P (2020) <doi:10.2436/20.8080.02.95>.
-#' Integer constraints for enhancing interpretability in linear regression.
-#' SORT-Statistics and Operations Research Transactions.
+#' Carrizosa, E., Olivares-Nadal, A. V., & Ramírez-Cobo, P. (2020).
+#' Integer Constraints for Enhancing Interpretability in Linear Regression.
+#' SORT. Statistics and Operations Research Transactions, 44: 67-98.
+#' \doi{10.2436/20.8080.02.95}.
 #' @export
 pairwise_sign_coherence <- function(
     rho = 0.8,
@@ -352,13 +387,25 @@ pairwise_sign_coherence <- function(
 #' Generic Functions for \code{hglmc} Objects
 #'
 #' Generic functions for holistic 'GLM' constraints.
+#'
+#' The 'HGLM' constraints are all of class \code{"hglmc"}
+#' and can be combined with the typical combine function \code{c()}.
+#' To verify that an object is a 'HGLM' constraint, the function
+#' \code{is.hglmc} can be used.
+#'
 #' @param ... multiple objects inheriting from \code{"hglmc"} to be combined.
+#' @return
+#' The combine function \code{c()} returns an object of class \code{"hglmc"}.
+#' The \code{is.hglmc} function returns \code{TRUE} if the object inherits
+#' from class \code{"hglmc"} otherwise \code{FALSE}.
+#' @examples
+#' constraints <- c(k_max(7), pairwise_sign_coherence())
+#' is.hglmc(constraints)
 #' @name hglmc
 #' @rdname hglmc
 NULL
 
 #' @rdname hglmc
-#' @return An object of class \code{"hglmc"}.
 #' @export
 c.hglmc <- function(...) {
     x <- list(...)
@@ -533,3 +580,4 @@ add_constraint.pairwise_sign_coherence <- function(model, constraint) {
         constraint[["rho_max"]], constraint[["exclude"]], constraint[["big_m"]],
         constraint[["eps"]], constraint[["use"]], constraint[["method"]])
 }
+

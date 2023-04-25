@@ -13,7 +13,7 @@ include(vars)
 A holistic generalized model constraint, object inheriting from class \code{"hglmc"}.
 }
 \description{
-Ensures that all covariates specified by \code{vars} have nonzero coefficients.
+Ensures that all covariates specified by \code{vars} coefficients are active.
 }
 \examples{
 dat <- rhglm(100, c(1, 2, 3, 4, 5, 6))

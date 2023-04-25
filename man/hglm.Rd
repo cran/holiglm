@@ -18,7 +18,8 @@ hglm(
   big_m = 100,
   solver = "auto",
   control = list(),
-  dry_run = FALSE
+  dry_run = FALSE,
+  object_size = c("normal", "big")
 )
 
 holiglm(
@@ -33,7 +34,8 @@ holiglm(
   big_m = 100,
   solver = "auto",
   control = list(),
-  dry_run = FALSE
+  dry_run = FALSE,
+  object_size = c("normal", "big")
 )
 
 hglm_seq(
@@ -47,7 +49,9 @@ hglm_seq(
     "minmax", "off"),
   big_m = 100,
   solver = "auto",
-  control = list()
+  control = list(),
+  object_size = c("normal", "big"),
+  parallel = FALSE
 )
 }
 \arguments{
@@ -81,14 +85,25 @@ Required to inherit from \code{"hglmc"}. Currently constraints created by
 
 \item{dry_run}{a logical; if \code{TRUE} the model is not fit but only constructed.}
 
+\item{object_size}{a character string giving the object size, allowed values
+are \code{"normal"} and \code{"big"}. If \code{"big"} is choosen, also
+the \pkg{ROI} solution and the \code{"hglm_model"} object are returned.}
+
 \item{k_seq}{an integer vector giving the values of \code{k_max} for which the model
 should be estimated.}
+
+\item{parallel}{whether estimation of sequence shall be parallelized}
 }
 \value{
 An object of class \code{"hglm"} inheriting from \code{"glm"}.
 }
 \description{
 Fit a generalized linear model under holistic constraints.
+}
+\details{
+In the case of binding linear constraints the standard errors are corrected,
+         more information about the correction can be found in
+         \href{https://arxiv.org/abs/2205.15447}{Schwendinger, Schwendinger and Vana (2022)}.
 }
 \examples{
 dat <- rhglm(100, c(1, 2, -3, 4, 5, -6))
@@ -99,4 +114,39 @@ hglm(y ~ ., constraints = NULL, data = dat)
 hglm(y ~ ., constraints = k_max(3), data = dat)
 # estimation without intercept
 hglm(y ~ . - 1, data = dat)
+
+}
+\references{
+Schwendinger B., Schwendinger F., Vana L. (2022).
+Holistic Generalized Linear Models
+\doi{10.48550/arXiv.2205.15447}
+
+Bertsimas, D., & King, A. (2016).
+OR Forum-An Algorithmic Approach to Linear Regression
+Operations Research 64(1):2-16.
+\doi{10.1287/opre.2015.1436}
+
+McCullagh, P., & Nelder, J. A. (2019).
+Generalized Linear Models (2nd ed.)
+Routledge.
+\doi{10.1201/9780203753736}.
+
+Dobson, A. J., & Barnett, A. G. (2018).
+An Introduction to Generalized Linear Models (4th ed.)
+Chapman and Hall/CRC.
+\doi{10.1201/9781315182780}
+
+Chares, Robert. (2009).
+“Cones and Interior-Point Algorithms for Structured Convex Optimization involving Powers and Exponentials.”
+
+Chen, J., & Chen, Z. (2008).
+Extended Bayesian information criteria for model selection with large model spaces.
+Biometrika, 95 (3): 759–771.
+Oxford University Press.
+\doi{10.1093/biomet/asn034}
+
+Zhu, J., Wen, C., Zhu, J., Zhang, H., & Wang, X. (2020).
+A polynomial algorithm for best-subset selection problem.
+Proceedings of the National Academy of Sciences, 117 (52): 33117–33123.
+\doi{10.1073/pnas.2014241117}
 }

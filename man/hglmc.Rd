@@ -16,8 +16,20 @@ is.hglmc(x)
 \item{x}{an R object.}
 }
 \value{
-An object of class \code{"hglmc"}.
+The combine function \code{c()} returns an object of class \code{"hglmc"}.
+The \code{is.hglmc} function returns \code{TRUE} if the object inherits
+from class \code{"hglmc"} otherwise \code{FALSE}.
 }
 \description{
 Generic functions for holistic 'GLM' constraints.
+}
+\details{
+The 'HGLM' constraints are all of class \code{"hglmc"}
+and can be combined with the typical combine function \code{c()}.
+To verify that an object is a 'HGLM' constraint, the function
+\code{is.hglmc} can be used.
+}
+\examples{
+constraints <- c(k_max(7), pairwise_sign_coherence())
+is.hglmc(constraints)
 }

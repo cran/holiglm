@@ -10,7 +10,8 @@ hglm_fit(
   big_m,
   solver = "auto",
   control = list(),
-  dry_run = FALSE
+  dry_run = FALSE,
+  object_size = c("normal", "big")
 )
 }
 \arguments{
@@ -28,6 +29,10 @@ Required to inherit from \code{"hglmc"}. Currently constraints created by
 \item{control}{a list of control parameters passed to \code{ROI_solve}.}
 
 \item{dry_run}{a logical if \code{TRUE} the model is not fit but only constructed.}
+
+\item{object_size}{a character string giving the object size, allowed values
+are \code{"normal"} and \code{"big"}. If \code{"big"} is choosen, also
+the \pkg{ROI} solution and the \code{"hglm_model"} object are returned.}
 }
 \value{
 an object of class \code{"hglm.fit"} inheriting from \code{"glm"}.

@@ -1,6 +1,3 @@
-# library("checkmate")
-
-# library("stm")
 log1exp <- function(xi, j, n_y_is_0) {
     k <- length(xi)
     si <- c(rep.int(1, k),     3,                4,     6)
@@ -46,25 +43,6 @@ loglike_binomial_log <- function(x, y, weights = rep.int(1L, NROW(x)), eps = 1e-
     }
     n_y_is_0 <- sum(y_is_0)
     op <- OP(-c(beta=yx, double(n_y_is_0), weights), maximum = FALSE)
-    L1 <- cbind(x, stzm(nrow(x), 2 * n_y_is_0))
-    L2 <- mapply(log1exp, split(x[y_is_0,], seq_len(n_y_is_0)),
-                 seq_len(n_y_is_0), MoreArgs = list(n_y_is_0 = n_y_is_0),
-                 SIMPLIFY = FALSE)
-    rhs <- c(c(0, 1, 0), c(0, 1, 1))
-    rhs <- c(rep(-eps, nrow(x)), rep(rhs, n_y_is_0))
-    cones <- c(K_lin(nrow(x)), K_expp(2 * n_y_is_0))
-    L <- do.call(rbind, c(list(L1), L2))
-    constraints(op) <- C_constraint(L, cones, rhs)
-    bounds(op) <- V_bound(ld = -Inf, nobj = length(objective(op)))
-    op
-}
-
-
-delme__loglike_binomial_log <- function(x, y, eps = 1e-7, ...) {
-    assert_numeric(y)
-    y_is_0 <- y == 0L
-    n_y_is_0 <- sum(y_is_0)
-    op <- OP(c(beta=-(y %*% x), -double(n_y_is_0), -rep(1, n_y_is_0)), maximum = FALSE)
     L1 <- cbind(x, stzm(nrow(x), 2 * n_y_is_0))
     L2 <- mapply(log1exp, split(x[y_is_0,], seq_len(n_y_is_0)),
                  seq_len(n_y_is_0), MoreArgs = list(n_y_is_0 = n_y_is_0),
@@ -240,7 +218,7 @@ loglike_poisson_sqrt <- function(x, y, weights = rep.int(1L, NROW(x)), ...) {
 # @export
 loglike_gaussian_identity <- function(x, y, weights = rep.int(1L, NROW(x)), solver = "auto", ...) {
     if (solver=="ecos" || solver=="auto" && "ecos" %in% names(ROI::ROI_registered_solvers())) {
-        # FIXME: This is to simple.
+        # FIXME: Use a better algorithm to select the solver.
         return(loglike_gaussian_identity_SOCP(x, y, weights = weights, ...))
     }
     if (is.null(weights)) {
@@ -273,18 +251,3 @@ loglike_gaussian_identity_SOCP <- function(x, y, weights = rep.int(1L, NROW(x)),
     op
 }
 
-
-# loglike_Gamma_inverse <- function(x, y, ...) {
-#     # FIXME: Add weights!
-#     if ("weights" %in% names(list(...))) warning("weights not supported by this link function")
-#     m <- NROW(x); n <- NCOL(x)
-#     i <- 3 * seq_len(m) - 2
-#     op <- OP(c(-y %*% x, rep(1, m)))
-#     C1 <- stm(rep(i+2, n), rep(seq_len(n), each = m), -drop(x), 3 * m, n)
-#     C2 <- stm(i, seq_len(m), rep(-1,m), 3*m)
-#     A <- cbind(C1, C2)
-#     rhs <- rep(c(0,1,0), m)
-#     constraints(op) <- C_constraint(A, c(K_expp(m)), rhs=rhs)
-#     bounds(op) <- V_bound(ld = -Inf, nobj = n+m)
-#     op
-# }

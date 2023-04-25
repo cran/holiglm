@@ -26,6 +26,12 @@ dat <- rhglm(100, c(1, -2, 3, 4, 5, 6))
 constraints <- sign_coherence(c("x1", "x3"))
 hglm(y ~ ., constraints = constraints, data = dat)
 }
+\references{
+Carrizosa, E., Olivares-Nadal, A. V., & Ramírez-Cobo, P. (2020).
+Integer Constraints for Enhancing Interpretability in Linear Regression.
+SORT. Statistics and Operations Research Transactions, 44: 67-98.
+\doi{10.2436/20.8080.02.95}.
+}
 \seealso{
 Other Constraint-Constructors: 
 \code{\link{group_equal}()},

@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+<meta name="date" content="2023-04-24" />
+
+<title>Extending the holiglm package</title>
+
+<script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
+// be compatible with the behavior of Pandoc < 2.8).
+document.addEventListener('DOMContentLoaded', function(e) {
+  var hs = document.querySelectorAll("div.section[class*='level'] > :first-child");
+  var i, h, a;
+  for (i = 0; i < hs.length; i++) {
+    h = hs[i];
+    if (!/^h[1-6]$/i.test(h.tagName)) continue;  // it should be a header h1-h6
+    a = h.attributes;
+    while (a.length > 0) h.removeAttribute(a[0].name);
+  }
+});
+</script>
+
+<style type="text/css">
+  code{white-space: pre-wrap;}
+  span.smallcaps{font-variant: small-caps;}
+  span.underline{text-decoration: underline;}
+  div.column{display: inline-block; vertical-align: top; width: 50%;}
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+  ul.task-list{list-style: none;}
+    </style>
+
+
+<style type="text/css">
+  code {
+    white-space: pre;
+  }
+  .sourceCode {
+    overflow: visible;
+  }
+</style>
+<style type="text/css" data-origin="pandoc">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<style type="text/css">
+/* for pandoc --citeproc since 2.11 */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}
+</style>
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Extending the holiglm package</h1>
+<h4 class="date">2023-04-24</h4>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#using-unsupported-constraints"><span class="toc-section-number">1</span> Using unsupported constraints</a>
+<ul>
+<li><a href="#without-scaling"><span class="toc-section-number">1.1</span> Without scaling</a></li>
+<li><a href="#with-scaling"><span class="toc-section-number">1.2</span> With scaling</a></li>
+</ul></li>
+<li><a href="#using-unsupported-likelihood-objective-functions"><span class="toc-section-number">2</span> Using unsupported likelihood / objective functions</a>
+<ul>
+<li><a href="#can-my-problem-be-solved-by-conic-optimization"><span class="toc-section-number">2.1</span> Can my problem be solved by conic optimization?</a></li>
+<li><a href="#example-lad"><span class="toc-section-number">2.2</span> Example LAD</a></li>
+</ul></li>
+<li><a href="#references">References</a></li>
+</ul>
+</div>
+
+<p>This document shows how to extend the <strong>holiglm</strong> package with new likelihood / objective functions or constraints. To extend the <strong>holiglm</strong> package users are required to be familiar with the <strong>ROI</strong> package <span class="citation">(<a href="#ref-roi:theussl:2020" role="doc-biblioref">Theußl, Schwendinger, and Hornik 2020</a>)</span>. Additional examples and information about <strong>ROI</strong> can be found on the <a href="https://roi.r-forge.r-project.org/"><strong>ROI</strong>-homepage</a>.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Sys.setenv</span>(<span class="at">ROI_LOAD_PLUGINS =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">&quot;slam&quot;</span>)</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">&quot;ROI&quot;</span>)</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; ROI: R Optimization Infrastructure</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Registered solver plugins: nlminb.</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Default solver: auto.</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="fu">library</span>(<span class="st">&quot;holiglm&quot;</span>)</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Loading required package: ROI.plugin.ecos</span></span></code></pre></div>
+<p>For illustration purposes we will make use of the <code>Default</code> data set in package <strong>ISLR</strong> <span class="citation">(<a href="#ref-pkg:ISLR" role="doc-biblioref">James et al. 2021</a>)</span>, to which we add two more columns <code>rand_1</code> and <code>rand_2</code> containing variables unrelated to the response.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="fu">data</span>(<span class="st">&quot;Default&quot;</span>, <span class="at">package =</span> <span class="st">&quot;ISLR&quot;</span>)</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>Default[[<span class="st">&quot;rand_1&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="fu">nrow</span>(Default))</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>Default[[<span class="st">&quot;rand_2&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="fu">nrow</span>(Default))</span></code></pre></div>
+<div id="using-unsupported-constraints" class="section level1" number="1">
+<h1 number="1"><span class="header-section-number">1</span> Using unsupported constraints</h1>
+<p>Currently <strong>holiglm</strong> supports a set of specific constraints from the holistic regression literature and general linear constraints. However, it is possible to specify custom constraints, as long as they are supported by a linear, quadratic or conic optimization solver available from <strong>ROI</strong>.</p>
+<p>When implementing new constraints it is important that the scaling of the model matrix is considered. There are two options to account for the scaling,</p>
+<ol style="list-style-type: decimal">
+<li>turn off the internal scaling or</li>
+<li>modify the constraints such that they are consistent with the internal scaling.</li>
+</ol>
+<p>In the following we show, how to implement a linear constraint and custom conic constraint, with and without scaling.</p>
+<div id="without-scaling" class="section level2" number="1.1">
+<h2 number="1.1"><span class="header-section-number">1.1</span> Without scaling</h2>
+<p>When adding custom constraints to the model, the scaling of the model matrix has to be considered. The main purpose of the scaling is to simplify the choice of the big-M constraints. Therefore, if no sparsity constraint is imposed on the model the easiest way to add additional constraints is to turn off the scaling and add the constraints to the model object. In the following example we show how this can be accomplished for linear constraints.</p>
+<div id="linear-constraint" class="section level3" number="1.1.1">
+<h3 number="1.1.1"><span class="header-section-number">1.1.1</span> Linear constraint</h3>
+<p>The <strong>holiglm</strong> package allows to impose linear constraints on the coefficients and the indicator variables of the coefficients via the <code>linear()</code> function. However, to start with a simple example we will add linear constraints to the model without using the <code>linear()</code> function.</p>
+<p>Let us assume we want to impose the constraint that the coefficients of variables <code>balance</code> and <code>income</code> are equal. This can be easily accomplished by,</p>
+<ol style="list-style-type: decimal">
+<li>obtaining the model object,</li>
+<li>altering the model object and</li>
+<li>fitting the altered model.</li>
+</ol>
+<p>To obtain the model object, function <code>hglm()</code> with parameter <code>dry_run</code> set to <code>TRUE</code> can be used.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> <span class="fu">hglm</span>(default <span class="sc">~</span> ., <span class="fu">binomial</span>(), <span class="at">scaler =</span> <span class="st">&quot;off&quot;</span>, <span class="at">data =</span> Default, <span class="at">dry_run =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>model[[<span class="st">&quot;constraints&quot;</span>]]</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; list()</span></span></code></pre></div>
+<p>Since the scaling is turned off, the constraint can be added by adding the corresponding <strong>ROI</strong> constraint. Note, the variables <code>&quot;balance&quot;</code> and <code>&quot;income&quot;</code> are on the 3rd and 4th position in the model matrix.</p>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="fu">match</span>(<span class="fu">c</span>(<span class="st">&quot;balance&quot;</span>, <span class="st">&quot;income&quot;</span>), <span class="fu">colnames</span>(model[[<span class="st">&quot;x&quot;</span>]]))</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 3 4</span></span></code></pre></div>
+<p>Therefore, we impose the constraints on the 3rd and 4th column of the constraint matrix.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>L <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="sc">-</span><span class="dv">1</span>), <span class="dv">1</span>)</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>model[[<span class="st">&quot;constraints&quot;</span>]][[<span class="dv">1</span>]] <span class="ot">&lt;-</span> <span class="fu">L_constraint</span>(L, <span class="st">&quot;==&quot;</span>, <span class="dv">0</span>)</span></code></pre></div>
+<p>To solve the altered model, function <code>hglm_fit()</code> can be used.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hglm_fit</span>(model)</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Error in as.OP.hglm_model(x = model): dimension missmatch in as.OP</span></span></code></pre></div>
+<p>Looking at the output above shows that <code>balance</code> and <code>income</code> have now the same coefficient as required by the constraint. However, it seems important to point out that for linear constraints it is typically easier to use the <code>linear()</code> function directly.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">hglm</span>(default <span class="sc">~</span> ., <span class="fu">binomial</span>(), <span class="at">data =</span> Default,</span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>            <span class="at">constraints =</span> <span class="fu">linear</span>(<span class="fu">c</span>(<span class="at">balance =</span> <span class="dv">1</span>, <span class="at">income =</span> <span class="sc">-</span><span class="dv">1</span>), <span class="st">&quot;==&quot;</span>, <span class="dv">0</span>))</span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>fit</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-6"><a href="#cb7-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Call:  hglm(formula = default ~ ., family = binomial(), data = Default, </span></span>
+<span id="cb7-7"><a href="#cb7-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     constraints = linear(c(balance = 1, income = -1), &quot;==&quot;, 0))</span></span>
+<span id="cb7-8"><a href="#cb7-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-9"><a href="#cb7-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb7-10"><a href="#cb7-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; (Intercept)   studentYes      balance       income       rand_1       rand_2  </span></span>
+<span id="cb7-11"><a href="#cb7-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  -4.357e+00    8.669e-01    2.039e-05    2.039e-05   -4.784e-02    3.914e-02  </span></span>
+<span id="cb7-12"><a href="#cb7-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb7-13"><a href="#cb7-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Degrees of Freedom: 9999 Total (i.e. Null);  9994 Residual</span></span>
+<span id="cb7-14"><a href="#cb7-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Null Deviance:       2921 </span></span>
+<span id="cb7-15"><a href="#cb7-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Residual Deviance: 2898  AIC: 2910</span></span></code></pre></div>
+<p>Looking more closely at the constraints,</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>model_1 <span class="ot">&lt;-</span> <span class="fu">hglm</span>(default <span class="sc">~</span> ., <span class="fu">binomial</span>(), <span class="at">data =</span> Default, <span class="at">dry_run =</span> <span class="cn">TRUE</span>,</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>                <span class="at">constraints =</span> <span class="fu">linear</span>(<span class="fu">c</span>(<span class="at">balance =</span> <span class="dv">1</span>, <span class="at">income =</span> <span class="sc">-</span><span class="dv">1</span>), <span class="st">&quot;==&quot;</span>, <span class="dv">0</span>))</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a><span class="fu">c</span>(<span class="fu">ncol</span>(<span class="fu">L_constraint</span>(L, <span class="st">&quot;==&quot;</span>, <span class="dv">0</span>)[[<span class="st">&quot;L&quot;</span>]]), <span class="fu">ncol</span>(model_1[[<span class="st">&quot;constraints&quot;</span>]][[<span class="dv">1</span>]][[<span class="st">&quot;L&quot;</span>]]))</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1]     4 20011</span></span></code></pre></div>
+<p>it is easy to recognize that the dimension of 4 of the linear constraint specified above is not equal to the dimension of the constraint obtained by using <code>linear()</code> directly in <code>hglm()</code>. This happens due to the auxiliary variables which enter the problem when specifing the likelihood function. However, this is no problem since the dimensions of the constraints are internally matched when <code>as.OP</code> is called.</p>
+<!-- LV: I think we don't need this last part -->
+<!-- Alternatively, one could also transform the problem into a -->
+<!-- **ROI** optimization problem and solve via `ROI_solve` -->
+<!-- ```{r} -->
+<!-- op <- as.OP(model_1) -->
+<!-- sol <- ROI_solve(op) -->
+<!-- head(solution(sol), ncol(model_1[["x"]])) -->
+<!-- ``` -->
+<!-- however it is typically more convenient to call `hglm_fit`. -->
+</div>
+<div id="non-linear-constraint" class="section level3" number="1.1.2">
+<h3 number="1.1.2"><span class="header-section-number">1.1.2</span> Non-linear constraint</h3>
+<p>This example shows how to add the non-linear constraint <span class="math inline">\(\sqrt{\beta_{\text{balance}}^2 + \beta_{\text{income}}^2} \leq 1\)</span> to the model. To demonstrate the effect of the constraint we scale the credit default data, such that the coefficients of <code>balance</code> and <code>income</code> are both bigger than one.</p>
+<!-- LV: We do we need another random variable when we have rand_1 and rand_2? -->
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>credit_default <span class="ot">&lt;-</span> Default</span>
+<span id="cb9-2"><a href="#cb9-2" aria-hidden="true" tabindex="-1"></a>credit_default[, <span class="dv">3</span>] <span class="ot">&lt;-</span> credit_default[, <span class="dv">3</span>] <span class="sc">/</span> <span class="dv">1000</span></span>
+<span id="cb9-3"><a href="#cb9-3" aria-hidden="true" tabindex="-1"></a>credit_default[, <span class="dv">4</span>] <span class="ot">&lt;-</span> credit_default[, <span class="dv">4</span>] <span class="sc">/</span> <span class="dv">1000000</span></span>
+<span id="cb9-4"><a href="#cb9-4" aria-hidden="true" tabindex="-1"></a>credit_default[[<span class="st">&quot;random&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">rnorm</span>(<span class="fu">nrow</span>(credit_default))</span>
+<span id="cb9-5"><a href="#cb9-5" aria-hidden="true" tabindex="-1"></a><span class="fu">glm</span>(default <span class="sc">~</span> ., <span class="at">family =</span> <span class="fu">binomial</span>(), <span class="at">data =</span> credit_default)</span>
+<span id="cb9-6"><a href="#cb9-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-7"><a href="#cb9-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Call:  glm(formula = default ~ ., family = binomial(), data = credit_default)</span></span>
+<span id="cb9-8"><a href="#cb9-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-9"><a href="#cb9-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb9-10"><a href="#cb9-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; (Intercept)   studentYes      balance       income       rand_1       rand_2       random  </span></span>
+<span id="cb9-11"><a href="#cb9-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   -10.88340     -0.63742      5.73652      3.23051     -0.06304      0.03268      0.06083  </span></span>
+<span id="cb9-12"><a href="#cb9-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb9-13"><a href="#cb9-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Degrees of Freedom: 9999 Total (i.e. Null);  9993 Residual</span></span>
+<span id="cb9-14"><a href="#cb9-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Null Deviance:       2921 </span></span>
+<span id="cb9-15"><a href="#cb9-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Residual Deviance: 1570  AIC: 1584</span></span></code></pre></div>
+<p>The constraint <span class="math inline">\(\sqrt{\beta_{\text{balance}}^2 + \beta_{\text{income}}^2} \leq 1\)</span> can be modeled by making use of the second order cone,</p>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>C <span class="ot">&lt;-</span> <span class="fu">rbind</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="sc">-</span><span class="dv">1</span>, <span class="dv">0</span>), <span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">0</span>, <span class="sc">-</span><span class="dv">1</span>))</span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>socp <span class="ot">&lt;-</span> <span class="fu">C_constraint</span>(C, <span class="fu">K_soc</span>(<span class="dv">3</span>), <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">0</span>))</span></code></pre></div>
+<p>Similar to adding linear constraints, first the model has to be generated,</p>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>model_2 <span class="ot">&lt;-</span> <span class="fu">hglm</span>(default <span class="sc">~</span> ., <span class="fu">binomial</span>(), <span class="at">scaler =</span> <span class="st">&quot;off&quot;</span>,</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>                <span class="at">data =</span> credit_default, <span class="at">dry_run =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p>afterwards the constraint can be added</p>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>model_2[[<span class="st">&quot;constraints&quot;</span>]][[<span class="dv">1</span>]] <span class="ot">&lt;-</span> socp</span></code></pre></div>
+<p>and the model can be fit via the <code>hglm_fit()</code> function.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">hglm_fit</span>(model_2, <span class="at">solver =</span> <span class="st">&quot;ecos&quot;</span>)</span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Error in as.OP.hglm_model(x = model): dimension missmatch in as.OP</span></span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(fit)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   (Intercept)    studentYes       balance        income        rand_1        rand_2 </span></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; -4.357400e+00  8.668843e-01  2.039058e-05  2.039058e-05 -4.784277e-02  3.913994e-02</span></span></code></pre></div>
+<p>Calculating <span class="math inline">\(\sqrt{\beta_{\text{balance}}^2 + \beta_{\text{income}}^2} \leq 1\)</span></p>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">sqrt</span>(<span class="fu">sum</span>(<span class="fu">coef</span>(fit)[<span class="fu">c</span>(<span class="st">&quot;balance&quot;</span>, <span class="st">&quot;income&quot;</span>)]<span class="sc">^</span><span class="dv">2</span>))</span>
+<span id="cb14-2"><a href="#cb14-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 2.883664e-05</span></span></code></pre></div>
+<p>verifies that the constraint is fulfilled.</p>
+</div>
+</div>
+<div id="with-scaling" class="section level2" number="1.2">
+<h2 number="1.2"><span class="header-section-number">1.2</span> With scaling</h2>
+<div id="linear-constraint-1" class="section level3" number="1.2.1">
+<h3 number="1.2.1"><span class="header-section-number">1.2.1</span> Linear constraint</h3>
+<p>In this example we combine the sparsity constraint that at most <span class="math inline">\(3\)</span> features are selected with the linear constraint <span class="math inline">\(\beta_\text{balance} = \beta_\text{income}\)</span>. Using <code>hglm()</code>, this model can be estimated by:</p>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb15-1"><a href="#cb15-1" aria-hidden="true" tabindex="-1"></a>constraints <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">k_max</span>(<span class="dv">3</span>), <span class="fu">linear</span>(<span class="fu">c</span>(<span class="at">balance =</span> <span class="dv">1</span>, <span class="at">income =</span> <span class="sc">-</span><span class="dv">1</span>), <span class="st">&quot;==&quot;</span>, <span class="dv">0</span>))</span>
+<span id="cb15-2"><a href="#cb15-2" aria-hidden="true" tabindex="-1"></a>model_3 <span class="ot">&lt;-</span> <span class="fu">hglm</span>(default <span class="sc">~</span> ., <span class="fu">binomial</span>(), <span class="at">constraints =</span> constraints,</span>
+<span id="cb15-3"><a href="#cb15-3" aria-hidden="true" tabindex="-1"></a>                <span class="at">data =</span> Default, <span class="at">dry_run =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb15-4"><a href="#cb15-4" aria-hidden="true" tabindex="-1"></a>model_3[[<span class="st">&quot;constraints&quot;</span>]]</span>
+<span id="cb15-5"><a href="#cb15-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $bigM</span></span>
+<span id="cb15-6"><a href="#cb15-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; An object containing 10 linear constraints.</span></span>
+<span id="cb15-7"><a href="#cb15-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb15-8"><a href="#cb15-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $global_sparsity_1</span></span>
+<span id="cb15-9"><a href="#cb15-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; An object containing 1 linear constraint.</span></span>
+<span id="cb15-10"><a href="#cb15-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb15-11"><a href="#cb15-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; $linear_constraint_1</span></span>
+<span id="cb15-12"><a href="#cb15-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; An object containing 1 linear constraint.</span></span></code></pre></div>
+<p>Inspecting the linear constraint,</p>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb16-1"><a href="#cb16-1" aria-hidden="true" tabindex="-1"></a><span class="fu">str</span>(model_3[[<span class="st">&quot;constraints&quot;</span>]][[<span class="st">&quot;linear_constraint_1&quot;</span>]])</span>
+<span id="cb16-2"><a href="#cb16-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; List of 4</span></span>
+<span id="cb16-3"><a href="#cb16-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ L    :List of 6</span></span>
+<span id="cb16-4"><a href="#cb16-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ i       : int [1:2] 1 1</span></span>
+<span id="cb16-5"><a href="#cb16-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ j       : int [1:2] 3 4</span></span>
+<span id="cb16-6"><a href="#cb16-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ v       : num [1:2] 3.77e-04 -1.37e-05</span></span>
+<span id="cb16-7"><a href="#cb16-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ nrow    : int 1</span></span>
+<span id="cb16-8"><a href="#cb16-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ ncol    : int 20011</span></span>
+<span id="cb16-9"><a href="#cb16-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..$ dimnames: NULL</span></span>
+<span id="cb16-10"><a href="#cb16-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;   ..- attr(*, &quot;class&quot;)= chr &quot;simple_triplet_matrix&quot;</span></span>
+<span id="cb16-11"><a href="#cb16-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ dir  : chr &quot;==&quot;</span></span>
+<span id="cb16-12"><a href="#cb16-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ rhs  : num 0</span></span>
+<span id="cb16-13"><a href="#cb16-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  $ names: NULL</span></span>
+<span id="cb16-14"><a href="#cb16-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  - attr(*, &quot;n_L_constraints&quot;)= int 1</span></span>
+<span id="cb16-15"><a href="#cb16-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  - attr(*, &quot;class&quot;)= chr [1:3] &quot;L_constraint&quot; &quot;Q_constraint&quot; &quot;constraint&quot;</span></span></code></pre></div>
+<p>shows that <code>hglm()</code> internally scales the coefficient matrix of the linear constraint based on the scaling of the model matrix. To scale the linear constraint matrix outside of the <code>hglm</code> function, the <code>scale_constraint_matrix</code> function can be used.</p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb17-1"><a href="#cb17-1" aria-hidden="true" tabindex="-1"></a>model_4 <span class="ot">&lt;-</span> <span class="fu">hglm</span>(default <span class="sc">~</span> ., <span class="fu">binomial</span>(), <span class="at">constraints =</span> <span class="fu">k_max</span>(<span class="dv">3</span>),</span>
+<span id="cb17-2"><a href="#cb17-2" aria-hidden="true" tabindex="-1"></a>                <span class="at">data =</span> Default, <span class="at">dry_run =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb17-3"><a href="#cb17-3" aria-hidden="true" tabindex="-1"></a>L <span class="ot">&lt;-</span> <span class="fu">matrix</span>(<span class="fu">c</span>(<span class="dv">0</span>, <span class="dv">0</span>, <span class="dv">1</span>, <span class="sc">-</span><span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">0</span>), <span class="dv">1</span>)</span>
+<span id="cb17-4"><a href="#cb17-4" aria-hidden="true" tabindex="-1"></a>L <span class="ot">&lt;-</span> <span class="fu">scale_constraint_matrix</span>(L, <span class="fu">attr</span>(model_4[[<span class="st">&quot;x&quot;</span>]], <span class="st">&quot;xs&quot;</span>), <span class="fu">attr</span>(model_4[[<span class="st">&quot;y&quot;</span>]], <span class="st">&quot;ys&quot;</span>))</span>
+<span id="cb17-5"><a href="#cb17-5" aria-hidden="true" tabindex="-1"></a>model_4[[<span class="st">&quot;constraints&quot;</span>]][[<span class="st">&quot;linear_constraint_1&quot;</span>]] <span class="ot">&lt;-</span> <span class="fu">L_constraint</span>(L, <span class="st">&quot;==&quot;</span>, <span class="dv">0</span>)</span>
+<span id="cb17-6"><a href="#cb17-6" aria-hidden="true" tabindex="-1"></a><span class="fu">hglm_fit</span>(model_4)</span>
+<span id="cb17-7"><a href="#cb17-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.</span></span>
+<span id="cb17-8"><a href="#cb17-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb17-9"><a href="#cb17-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Call:  NULL</span></span>
+<span id="cb17-10"><a href="#cb17-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb17-11"><a href="#cb17-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb17-12"><a href="#cb17-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; (Intercept)   studentYes      balance       income       rand_1       rand_2  </span></span>
+<span id="cb17-13"><a href="#cb17-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  -4.358e+00    8.672e-01    2.044e-05    2.044e-05    0.000e+00    0.000e+00  </span></span>
+<span id="cb17-14"><a href="#cb17-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb17-15"><a href="#cb17-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Degrees of Freedom: 9999 Total (i.e. Null);  9996 Residual</span></span>
+<span id="cb17-16"><a href="#cb17-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Null Deviance:       2921 </span></span>
+<span id="cb17-17"><a href="#cb17-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Residual Deviance: 2899  AIC: 2907</span></span></code></pre></div>
+<p>Again, it can be easily verified, that calling <code>hglm()</code> directly gives the same solution.</p>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>constraints <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">k_max</span>(<span class="dv">3</span>), <span class="fu">linear</span>(<span class="fu">c</span>(<span class="at">balance =</span> <span class="dv">1</span>, <span class="at">income =</span> <span class="sc">-</span><span class="dv">1</span>), <span class="st">&quot;==&quot;</span>, <span class="dv">0</span>))</span>
+<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a><span class="fu">hglm</span>(default <span class="sc">~</span> ., <span class="fu">binomial</span>(), <span class="at">constraints =</span> constraints, <span class="at">data =</span> Default)</span>
+<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.</span></span>
+<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Call:  hglm(formula = default ~ ., family = binomial(), data = Default, </span></span>
+<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     constraints = constraints)</span></span>
+<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; (Intercept)   studentYes      balance       income       rand_1       rand_2  </span></span>
+<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  -4.358e+00    8.672e-01    2.044e-05    2.044e-05    0.000e+00    0.000e+00  </span></span>
+<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Degrees of Freedom: 9999 Total (i.e. Null);  9996 Residual</span></span>
+<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Null Deviance:       2921 </span></span>
+<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Residual Deviance: 2899  AIC: 2907</span></span></code></pre></div>
+</div>
+<div id="non-linear-constraint-1" class="section level3" number="1.2.2">
+<h3 number="1.2.2"><span class="header-section-number">1.2.2</span> Non-linear constraint</h3>
+<p>This example shows how to add the non-linear constraint <span class="math inline">\(\sqrt{\beta_{\text{balance}}^2 + \beta_{\text{income}}^2} \leq 1\)</span>. Similar to the linear constraint we first generate the model,</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>constraints <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">k_max</span>(<span class="dv">3</span>), <span class="fu">linear</span>(<span class="fu">c</span>(<span class="at">balance =</span> <span class="dv">1</span>, <span class="at">income =</span> <span class="sc">-</span><span class="dv">1</span>), <span class="st">&quot;==&quot;</span>, <span class="dv">0</span>))</span>
+<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>model_5 <span class="ot">&lt;-</span> <span class="fu">hglm</span>(default <span class="sc">~</span> ., <span class="fu">binomial</span>(), <span class="at">constraints =</span> constraints,</span>
+<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>                <span class="at">data =</span> credit_default, <span class="at">dry_run =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+<p>formulate the constraint</p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>nvars <span class="ot">&lt;-</span> <span class="fu">ncol</span>(model_5[[<span class="st">&quot;x&quot;</span>]])</span>
+<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>C <span class="ot">&lt;-</span> <span class="fu">simple_triplet_matrix</span>(<span class="fu">c</span>(<span class="dv">2</span>, <span class="dv">3</span>), <span class="fu">c</span>(<span class="dv">3</span>, <span class="dv">4</span>), <span class="fu">c</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="sc">-</span><span class="dv">1</span>), <span class="at">ncol =</span> nvars)</span>
+<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>C <span class="ot">&lt;-</span> <span class="fu">scale_constraint_matrix</span>(C, <span class="fu">attr</span>(model_5[[<span class="st">&quot;x&quot;</span>]], <span class="st">&quot;xs&quot;</span>), <span class="fu">attr</span>(model_5[[<span class="st">&quot;y&quot;</span>]], <span class="st">&quot;ys&quot;</span>))</span>
+<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>socp <span class="ot">&lt;-</span> <span class="fu">C_constraint</span>(C, <span class="fu">K_soc</span>(<span class="dv">3</span>), <span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">0</span>, <span class="dv">0</span>))</span></code></pre></div>
+<p>and add it to the model.</p>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a>model_5[[<span class="st">&quot;constraints&quot;</span>]][[<span class="st">&quot;socp_constraint_1&quot;</span>]] <span class="ot">&lt;-</span> socp</span>
+<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">hglm_fit</span>(model_5)</span>
+<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.</span></span>
+<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a><span class="fu">coef</span>(fit)</span>
+<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; (Intercept)  studentYes     balance      income      rand_1      rand_2      random </span></span>
+<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;  -4.1311607   0.2670113   0.7071068   0.7071068   0.0000000   0.0000000   0.0000000</span></span>
+<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a><span class="fu">sum</span>(<span class="fu">coef</span>(fit)[<span class="dv">3</span><span class="sc">:</span><span class="dv">4</span>]<span class="sc">^</span><span class="dv">2</span>)</span>
+<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; [1] 1</span></span></code></pre></div>
+</div>
+</div>
+</div>
+<div id="using-unsupported-likelihood-objective-functions" class="section level1" number="2">
+<h1 number="2"><span class="header-section-number">2</span> Using unsupported likelihood / objective functions</h1>
+<p>In this section we show how to implement additional currently unsupported objectives. This can be structured into 5 steps,</p>
+<ol style="list-style-type: decimal">
+<li>Verify that the desired objective / likelihood function can be represented via linear, quadratic or conic optimization and solved with a solver available from <strong>ROI</strong>.</li>
+<li>Implement a function which takes as input the model matrix <span class="math inline">\(x\)</span>, the response <span class="math inline">\(y\)</span> and optional arguments and returns a <strong>ROI</strong> <code>OP()</code> which can be solved by a mixed integer solver. Here the first <span class="math inline">\(p+1\)</span> variables of the optimization problem should correspond to <span class="math inline">\(\beta_0, ..., \beta_p\)</span>.</li>
+<li>Create the model object by calling <code>hglm()</code> with parameter <code>dry_run</code> set to <code>TRUE</code>.</li>
+<li>Replace the <code>&quot;loglikelihood&quot;</code> with the new objective.</li>
+<li>Use <code>hglm_fit</code> to fit the model.</li>
+</ol>
+<div id="can-my-problem-be-solved-by-conic-optimization" class="section level2" number="2.1">
+<h2 number="2.1"><span class="header-section-number">2.1</span> Can my problem be solved by conic optimization?</h2>
+</div>
+<div id="example-lad" class="section level2" number="2.2">
+<h2 number="2.2"><span class="header-section-number">2.2</span> Example LAD</h2>
+<div id="verify-problem-can-be-expressed-as-conic-optimization-problem" class="section level3" number="2.2.1">
+<h3 number="2.2.1"><span class="header-section-number">2.2.1</span> Verify problem can be expressed as conic optimization problem</h3>
+<p>The least absolute deviation regression problem is defined as, <span class="math display">\[
+\underset{\boldsymbol\beta}{\text{minimize }} ~~ || \boldsymbol y - X\boldsymbol \beta ||_1
+\]</span></p>
+<p>which can be solved via linear programming.</p>
+</div>
+<div id="implement-objective-function" class="section level3" number="2.2.2">
+<h3 number="2.2.2"><span class="header-section-number">2.2.2</span> Implement objective function</h3>
+Often the following reformulation is used,
+<span class="math display">\[\begin{array}{rll}
+  \underset{\boldsymbol{\beta}, ~ \boldsymbol{e}^+, ~ \boldsymbol{e}^-}{\text{minimize}} &amp;
+  \sum_{i=1}^n e_i^+ + e_i^- \\
+
+  \text{subject to} &amp;
+  \boldsymbol{x}^\top_i \boldsymbol{\beta} + e_i^+ - e_i^- = y_i &amp;
+  i = 1, \ldots{}, n \\
+
+  &amp;
+  e_i^+, e_i^- \geq 0 &amp;
+  i = 1,\ldots{},n
+\end{array}\]</span>
+<p>see, e.g., <span class="citation">(<a href="#ref-Charnes:1955" role="doc-biblioref">Charnes, Cooper, and Ferguson 1955</a>)</span>.</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a>lad_a <span class="ot">&lt;-</span> <span class="cf">function</span>(x, y) {</span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>    D <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">nrow</span>(x))</span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>    L <span class="ot">&lt;-</span> <span class="fu">rbind</span>(<span class="fu">cbind</span>( x, <span class="sc">-</span>D),</span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>               <span class="fu">cbind</span>(<span class="sc">-</span>x, <span class="sc">-</span>D))</span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>    obj <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">double</span>(<span class="fu">ncol</span>(x)), <span class="fu">rep.int</span>(<span class="dv">1</span>, <span class="fu">nrow</span>(x)))</span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">OP</span>(<span class="at">objective =</span> <span class="fu">L_objective</span>(obj),</span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>       <span class="at">constraints =</span> <span class="fu">L_constraint</span>(L, <span class="fu">leq</span>(<span class="dv">2</span> <span class="sc">*</span> <span class="fu">nrow</span>(x)), <span class="fu">c</span>(y, <span class="sc">-</span>y)),</span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>       <span class="at">bounds =</span> <span class="fu">V_bound</span>(<span class="at">ld =</span> <span class="sc">-</span><span class="cn">Inf</span>, <span class="at">nobj =</span> <span class="fu">length</span>(obj)))</span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+Alternatively, the LAD can be reformulated to
+<span class="math display">\[\begin{array}{rll}
+  \underset{\boldsymbol{\beta}, ~ \boldsymbol{\gamma}}{\text{minimize}} &amp;
+  \sum_{i=1}^n \gamma_i \\
+
+  \text{subject to} &amp;
+  -\gamma_i \leq \boldsymbol{x}^\top_i \boldsymbol{\beta} \leq \gamma_i &amp;
+  i = 1, \ldots{}, n
+\end{array}\]</span>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb23-1"><a href="#cb23-1" aria-hidden="true" tabindex="-1"></a>lad_b <span class="ot">&lt;-</span> <span class="cf">function</span>(x, y) {</span>
+<span id="cb23-2"><a href="#cb23-2" aria-hidden="true" tabindex="-1"></a>    obj <span class="ot">&lt;-</span> <span class="fu">L_objective</span>(<span class="fu">c</span>(<span class="fu">double</span>(<span class="fu">ncol</span>(x)), <span class="fu">rep.int</span>(<span class="dv">1</span>, <span class="dv">2</span> <span class="sc">*</span> <span class="fu">nrow</span>(x))))</span>
+<span id="cb23-3"><a href="#cb23-3" aria-hidden="true" tabindex="-1"></a>    D <span class="ot">&lt;-</span> <span class="fu">diag</span>(<span class="fu">nrow</span>(x))</span>
+<span id="cb23-4"><a href="#cb23-4" aria-hidden="true" tabindex="-1"></a>    con <span class="ot">&lt;-</span> <span class="fu">L_constraint</span>(<span class="at">L =</span> <span class="fu">cbind</span>(x, D, <span class="sc">-</span>D), <span class="at">dir =</span> <span class="fu">eq</span>(<span class="fu">nrow</span>(x)), <span class="at">rhs =</span> y)</span>
+<span id="cb23-5"><a href="#cb23-5" aria-hidden="true" tabindex="-1"></a>    bou <span class="ot">&lt;-</span> <span class="fu">V_bound</span>(<span class="at">li =</span> <span class="fu">seq_len</span>(<span class="fu">ncol</span>(x)), <span class="at">lb =</span> <span class="fu">rep.int</span>(<span class="sc">-</span><span class="cn">Inf</span>, <span class="fu">ncol</span>(x)), <span class="at">nobj =</span> <span class="fu">length</span>(obj))</span>
+<span id="cb23-6"><a href="#cb23-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">OP</span>(<span class="at">objective =</span> obj, <span class="at">constraints =</span> con, <span class="at">bounds =</span> bou)</span>
+<span id="cb23-7"><a href="#cb23-7" aria-hidden="true" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="create-model-object" class="section level3" number="2.2.3">
+<h3 number="2.2.3"><span class="header-section-number">2.2.3</span> Create model object</h3>
+<p>Third we create the model object,</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb24-1"><a href="#cb24-1" aria-hidden="true" tabindex="-1"></a>model_a <span class="ot">&lt;-</span> model_b <span class="ot">&lt;-</span> <span class="fu">hglm</span>(mpg <span class="sc">~</span> cyl <span class="sc">+</span> disp <span class="sc">+</span> hp <span class="sc">+</span> drat <span class="sc">+</span> wt, <span class="at">data =</span> mtcars, <span class="at">dry_run =</span> <span class="cn">TRUE</span>)</span></code></pre></div>
+</div>
+<div id="replace-likelihood" class="section level3" number="2.2.4">
+<h3 number="2.2.4"><span class="header-section-number">2.2.4</span> Replace likelihood</h3>
+<div class="sourceCode" id="cb25"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb25-1"><a href="#cb25-1" aria-hidden="true" tabindex="-1"></a>model_a <span class="ot">&lt;-</span> <span class="fu">update_objective</span>(model_a, <span class="fu">lad_a</span>(model_a<span class="sc">$</span>x, model_a<span class="sc">$</span>y))</span></code></pre></div>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb26-1"><a href="#cb26-1" aria-hidden="true" tabindex="-1"></a>model_b <span class="ot">&lt;-</span> <span class="fu">update_objective</span>(model_b, <span class="fu">lad_b</span>(model_b<span class="sc">$</span>x, model_b<span class="sc">$</span>y))</span></code></pre></div>
+</div>
+<div id="fit-model" class="section level3" number="2.2.5">
+<h3 number="2.2.5"><span class="header-section-number">2.2.5</span> Fit model</h3>
+<p>Fitting the model gives</p>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb27-1"><a href="#cb27-1" aria-hidden="true" tabindex="-1"></a><span class="fu">hglm_fit</span>(model_a)</span>
+<span id="cb27-2"><a href="#cb27-2" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.</span></span>
+<span id="cb27-3"><a href="#cb27-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb27-4"><a href="#cb27-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Call:  NULL</span></span>
+<span id="cb27-5"><a href="#cb27-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb27-6"><a href="#cb27-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb27-7"><a href="#cb27-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; (Intercept)          cyl         disp           hp         drat           wt  </span></span>
+<span id="cb27-8"><a href="#cb27-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    40.19297     -1.13698      0.01174     -0.02853     -0.08884     -3.63177  </span></span>
+<span id="cb27-9"><a href="#cb27-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb27-10"><a href="#cb27-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Degrees of Freedom: 31 Total (i.e. Null);  26 Residual</span></span>
+<span id="cb27-11"><a href="#cb27-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Null Deviance:       1126 </span></span>
+<span id="cb27-12"><a href="#cb27-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Residual Deviance: 180.2     AIC: 160.1</span></span>
+<span id="cb27-13"><a href="#cb27-13" aria-hidden="true" tabindex="-1"></a><span class="fu">hglm_fit</span>(model_b)</span>
+<span id="cb27-14"><a href="#cb27-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.</span></span>
+<span id="cb27-15"><a href="#cb27-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb27-16"><a href="#cb27-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Call:  NULL</span></span>
+<span id="cb27-17"><a href="#cb27-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb27-18"><a href="#cb27-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb27-19"><a href="#cb27-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; (Intercept)          cyl         disp           hp         drat           wt  </span></span>
+<span id="cb27-20"><a href="#cb27-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    40.19297     -1.13698      0.01174     -0.02853     -0.08884     -3.63177  </span></span>
+<span id="cb27-21"><a href="#cb27-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb27-22"><a href="#cb27-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Degrees of Freedom: 31 Total (i.e. Null);  26 Residual</span></span>
+<span id="cb27-23"><a href="#cb27-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Null Deviance:       1126 </span></span>
+<span id="cb27-24"><a href="#cb27-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Residual Deviance: 180.2     AIC: 160.1</span></span></code></pre></div>
+<p>the same result as package <strong>quantreg</strong>.</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb28-1"><a href="#cb28-1" aria-hidden="true" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">require</span>(<span class="st">&quot;quantreg&quot;</span>, <span class="at">quietly =</span> <span class="cn">TRUE</span>)) {</span>
+<span id="cb28-2"><a href="#cb28-2" aria-hidden="true" tabindex="-1"></a>    fm <span class="ot">&lt;-</span> quantreg<span class="sc">::</span><span class="fu">rq</span>(mpg <span class="sc">~</span> cyl <span class="sc">+</span> disp <span class="sc">+</span> hp <span class="sc">+</span> drat <span class="sc">+</span> wt, <span class="at">data =</span> mtcars)</span>
+<span id="cb28-3"><a href="#cb28-3" aria-hidden="true" tabindex="-1"></a>    <span class="fu">coef</span>(fm)</span>
+<span id="cb28-4"><a href="#cb28-4" aria-hidden="true" tabindex="-1"></a>}</span>
+<span id="cb28-5"><a href="#cb28-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb28-6"><a href="#cb28-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Attaching package: &#39;SparseM&#39;</span></span>
+<span id="cb28-7"><a href="#cb28-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; The following object is masked from &#39;package:base&#39;:</span></span>
+<span id="cb28-8"><a href="#cb28-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb28-9"><a href="#cb28-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     backsolve</span></span>
+<span id="cb28-10"><a href="#cb28-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; (Intercept)         cyl        disp          hp        drat          wt </span></span>
+<span id="cb28-11"><a href="#cb28-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; 40.19297107 -1.13697880  0.01174166 -0.02852600 -0.08883949 -3.63176521</span></span></code></pre></div>
+<p>Note constraints can be added during the fit using the <code>constraints</code> argument,</p>
+<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb29-1"><a href="#cb29-1" aria-hidden="true" tabindex="-1"></a>constraints <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">k_max</span>(<span class="dv">3</span>))</span>
+<span id="cb29-2"><a href="#cb29-2" aria-hidden="true" tabindex="-1"></a>(fit_a <span class="ot">&lt;-</span> <span class="fu">hglm_fit</span>(model_a, <span class="at">constraints =</span> constraints))</span>
+<span id="cb29-3"><a href="#cb29-3" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.</span></span>
+<span id="cb29-4"><a href="#cb29-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb29-5"><a href="#cb29-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Call:  NULL</span></span>
+<span id="cb29-6"><a href="#cb29-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb29-7"><a href="#cb29-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb29-8"><a href="#cb29-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; (Intercept)          cyl         disp           hp         drat           wt  </span></span>
+<span id="cb29-9"><a href="#cb29-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    38.33674     -1.13592      0.00000     -0.01475      0.00000     -3.01449  </span></span>
+<span id="cb29-10"><a href="#cb29-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb29-11"><a href="#cb29-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Degrees of Freedom: 31 Total (i.e. Null);  28 Residual</span></span>
+<span id="cb29-12"><a href="#cb29-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Null Deviance:       1126 </span></span>
+<span id="cb29-13"><a href="#cb29-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Residual Deviance: 190.7     AIC: 157.9</span></span>
+<span id="cb29-14"><a href="#cb29-14" aria-hidden="true" tabindex="-1"></a>(fit_b <span class="ot">&lt;-</span> <span class="fu">hglm_fit</span>(model_b, <span class="at">constraints =</span> constraints))</span>
+<span id="cb29-15"><a href="#cb29-15" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.</span></span>
+<span id="cb29-16"><a href="#cb29-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb29-17"><a href="#cb29-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Call:  NULL</span></span>
+<span id="cb29-18"><a href="#cb29-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb29-19"><a href="#cb29-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb29-20"><a href="#cb29-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; (Intercept)          cyl         disp           hp         drat           wt  </span></span>
+<span id="cb29-21"><a href="#cb29-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;    38.33674     -1.13592      0.00000     -0.01475      0.00000     -3.01449  </span></span>
+<span id="cb29-22"><a href="#cb29-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb29-23"><a href="#cb29-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Degrees of Freedom: 31 Total (i.e. Null);  28 Residual</span></span>
+<span id="cb29-24"><a href="#cb29-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Null Deviance:       1126 </span></span>
+<span id="cb29-25"><a href="#cb29-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Residual Deviance: 190.7     AIC: 157.9</span></span></code></pre></div>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb30-1"><a href="#cb30-1" aria-hidden="true" tabindex="-1"></a>model <span class="ot">&lt;-</span> model_a</span>
+<span id="cb30-2"><a href="#cb30-2" aria-hidden="true" tabindex="-1"></a>constraints <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fu">k_max</span>(<span class="dv">3</span>), <span class="fu">lower</span>(<span class="fu">c</span>(<span class="at">cyl =</span> <span class="dv">3</span>)))</span>
+<span id="cb30-3"><a href="#cb30-3" aria-hidden="true" tabindex="-1"></a><span class="fu">hglm_fit</span>(model_a, <span class="at">constraints =</span> constraints)</span>
+<span id="cb30-4"><a href="#cb30-4" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.</span></span>
+<span id="cb30-5"><a href="#cb30-5" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb30-6"><a href="#cb30-6" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Call:  NULL</span></span>
+<span id="cb30-7"><a href="#cb30-7" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb30-8"><a href="#cb30-8" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb30-9"><a href="#cb30-9" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; (Intercept)          cyl         disp           hp         drat           wt  </span></span>
+<span id="cb30-10"><a href="#cb30-10" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     32.8727       3.0000       0.0000      -0.0763       0.0000      -6.4791  </span></span>
+<span id="cb30-11"><a href="#cb30-11" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb30-12"><a href="#cb30-12" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Degrees of Freedom: 31 Total (i.e. Null);  28 Residual</span></span>
+<span id="cb30-13"><a href="#cb30-13" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Null Deviance:       1126 </span></span>
+<span id="cb30-14"><a href="#cb30-14" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Residual Deviance: 519   AIC: 190</span></span>
+<span id="cb30-15"><a href="#cb30-15" aria-hidden="true" tabindex="-1"></a><span class="fu">hglm_fit</span>(model_b, <span class="at">constraints =</span> constraints)</span>
+<span id="cb30-16"><a href="#cb30-16" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.</span></span>
+<span id="cb30-17"><a href="#cb30-17" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb30-18"><a href="#cb30-18" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Call:  NULL</span></span>
+<span id="cb30-19"><a href="#cb30-19" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb30-20"><a href="#cb30-20" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Coefficients:</span></span>
+<span id="cb30-21"><a href="#cb30-21" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; (Intercept)          cyl         disp           hp         drat           wt  </span></span>
+<span id="cb30-22"><a href="#cb30-22" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt;     32.8727       3.0000       0.0000      -0.0763       0.0000      -6.4791  </span></span>
+<span id="cb30-23"><a href="#cb30-23" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; </span></span>
+<span id="cb30-24"><a href="#cb30-24" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Degrees of Freedom: 31 Total (i.e. Null);  28 Residual</span></span>
+<span id="cb30-25"><a href="#cb30-25" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Null Deviance:       1126 </span></span>
+<span id="cb30-26"><a href="#cb30-26" aria-hidden="true" tabindex="-1"></a><span class="co">#&gt; Residual Deviance: 519   AIC: 190</span></span></code></pre></div>
+</div>
+</div>
+</div>
+<div id="references" class="section level1 unnumbered">
+<h1 class="unnumbered">References</h1>
+<div id="refs" class="references csl-bib-body hanging-indent">
+<div id="ref-Charnes:1955" class="csl-entry">
+Charnes, A., W. W. Cooper, and R. O. Ferguson. 1955. <span>“Optimal Estimation of Executive Compensation by Linear Programming.”</span> <em>Management Science</em> 1 (2): 138–51. <a href="https://www.jstor.org/stable/2627315">https://www.jstor.org/stable/2627315</a>.
+</div>
+<div id="ref-pkg:ISLR" class="csl-entry">
+James, Gareth, Daniela Witten, Trevor Hastie, and Rob Tibshirani. 2021. <em>ISLR: Data for an Introduction to Statistical Learning with Applications in r</em>. <a href="https://CRAN.R-project.org/package=ISLR">https://CRAN.R-project.org/package=ISLR</a>.
+</div>
+<div id="ref-roi:theussl:2020" class="csl-entry">
+Theußl, Stefan, Florian Schwendinger, and Kurt Hornik. 2020. <span>“ROI: <span>An</span> <span>Extensible</span> r <span>Optimization</span> <span>Infrastructure</span>.”</span> <em>Journal of Statistical Software</em> 94. <a href="https://doi.org/10.18637/jss.v094.i15">https://doi.org/10.18637/jss.v094.i15</a>.
+</div>
+</div>
+</div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

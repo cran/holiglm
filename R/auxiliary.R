@@ -98,3 +98,6 @@ agg_binomial <- function(formula, data, as_list = TRUE) {
         cbind(as.data.frame(y), as.data.frame(x)[,colnames(x) != "(Intercept)"])
     }
 }
+
+pad_TRUE <- function(x, n=0L) c(x, !logical(n))
+pad_FALSE <- function(x, n=0L) c(x, logical(n))

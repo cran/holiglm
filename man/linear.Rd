@@ -34,6 +34,13 @@ mat <- diag(2)
 colnames(mat) <- c("x1", "x5")
 constraints <- c(linear(mat, c("==", "=="), c(-1, 3)), rho_max(1))
 hglm(y ~ ., data = dat, constraints = constraints)
+
+}
+\references{
+Lawson, C. L., & Hanson, R. J. (1995).
+Solving least squares problems. Society for Industrial and Applied Mathematics.
+Society for Industrial and Applied Mathematics.
+\doi{10.1137/1.9781611971217}
 }
 \seealso{
 Other Constraint-Constructors: 

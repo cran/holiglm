@@ -1,7 +1,7 @@
 suppressPackageStartupMessages(library("holiglm"))
 Sys.setenv(ROI_LOAD_PLUGINS = FALSE)
 suppressPackageStartupMessages(library("ROI"))
-applicable_solvers <- c("ecos", "mosek")
+applicable_solvers <- c("ecos")
 installed_solvers <- ROI_installed_solvers()
 solver <- sample(installed_solvers[names(installed_solvers) %in% applicable_solvers], 1L)
 suppressPackageStartupMessages(require(solver, character.only = TRUE))
@@ -133,7 +133,12 @@ expect_equal(unname(coef(fit_minmax)), coef1, tolerance=1e-4)
 expect_equal(unname(coef(fit_off)), coef1, tolerance=1e-4)
 
 # scale response + predictors
-expect_warning(fit_y <- hglm(counts~., family=poisson(), dobson, constraints=NULL, scale_response=TRUE), pattern="Deactivated")
+fit_log_y <- hglm(counts~., family=poisson(link="log"), data=dobson, scale_response=TRUE)
+fit_id_y <- hglm(counts~., family=poisson(link="identity"), data=dobson, scale_response=TRUE)
+fit_sqrt_y <- hglm(counts~., family=poisson(link="sqrt"), data=dobson, scale_response=TRUE)
+expect_equal(unname(coef(fit_log_y)), coef1, tolerance=1e-4)
+expect_equal(unname(coef(fit_id_y)), c(21.5307, -7.76271, -5.38842, -0.59051, -0.85045), tolerance=1e-4)
+expect_equal(unname(coef(fit_sqrt_y)), c(4.61421, -0.93424, -0.62635, -0.03605, -0.05436), tolerance=1e-4)
 
 ## no intercept
 # scale predictors
@@ -157,7 +162,7 @@ expect_warning(fit_noI_center_minmax <- hglm(fo, family=poisson("sqrt"), data=mt
 fit_noI_standardization <- hglm(fo, family=poisson("sqrt"), data=mtcars, constraints=NULL, scaler="standardization")
 fit_noI_minmax <- hglm(fo, family=poisson("sqrt"), data=mtcars, constraints=NULL, scaler="minmax")
 fit_noI_off <- hglm(fo, family=poisson("sqrt"), data=mtcars, constraints=NULL, scaler="off")
-expect_warning(fit_noI_scaleY <- hglm(fo, family=poisson("sqrt"), data=mtcars, constraints=NULL, scale_response=TRUE, scaler="standardization"), pattern=".*Deactivated scaling response for family .*")
+fit_noI_scaleY <- hglm(fo, family=poisson("sqrt"), data=mtcars, constraints=NULL, scale_response=TRUE, scaler="standardization")
 expect_equal(unname(coef(fit_noI_center_standardization)), coef_noI, tolerance=1e-4)
 expect_equal(unname(coef(fit_noI_center_minmax)), coef_noI, tolerance=1e-4)
 expect_equal(unname(coef(fit_noI_standardization)), coef_noI, tolerance=1e-4)

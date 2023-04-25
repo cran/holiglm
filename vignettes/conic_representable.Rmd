@@ -1,0 +1,194 @@
+---
+title: "<center>Conic Representable</center>"
+date: "<center>`r Sys.Date()`</center>"
+output:
+  bookdown::html_document2: default
+  bookdown::pdf_document2: default
+bibliography: holiglm.bib
+link-citations: yes
+vignette: >
+  %\VignetteIndexEntry{Conic Representable}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 6,
+  fig.height = 6,
+  eval = TRUE,
+  error = TRUE
+)
+```
+
+In this section we introduce a simple decision tree, designed to provide guidance
+in answering the question whether a given problem is solvable via conic optimization.
+Note, due to the complexity of the topic and the manifold of special cases, the decision tree
+can only provide guidance and not provide a definitive answer. 
+For a general introduction into conic optimization see e.g.,
+@Boyd+Vandenberghe:2004 or @LectureNotes:Tal+Nemirovski:2001.</br></br>
+
+A general way to determine if a given optimization problem is solvable
+via conic optimization is illustrated in Figure \@ref(fig:conic). More specifically, 
+an optimization problem is solvable via conic optimization if it is convex and 
+if the objective and constraints can be represented using convex cones.
+In all other cases, the problem is in principle not solvable, however exceptions exist.
+Additional explanations to the decision tree are given in the subsection below.
+
+<center>
+
+```{r conic, echo = FALSE, fig.cap = cap_1, figure = TRUE}
+cap_1 <- "Simple decision tree to evaluate if a given optimization problem can be solved with a conic optimization solver."
+library("DiagrammeR")
+mermaid('
+%%{init: { "theme": "neutral" } }%%
+graph TB
+    A["Can my optimization problem be solved via conic optimization?"] --> B{"Convex?"};
+    B -- yes --> C{"Representable?"};
+    B -- no --> D["Not solvable (Exceptions A)."];
+    C -- yes --> E["Solvable via conic optimization."];
+    C -- no --> F["Not solvable (Exceptions B)."];
+    click D "#ExceptionsA" "For more information see Section `Exceptions A`"
+    click F "#ExceptionsB" "For more information see Section `Exceptions B`"
+')
+```
+
+
+</center>
+
+
+Another rather straight-forward way to verify that a problem is solvable via conic optimization
+is to enter the problem into one of the **CVX** [@cvx] domain specific language implementations.
+**CVX** uses disciplined convex programming (DCP) [@Grant:DCP:2004] to verify that
+a given problem is convex and conic representable. Note DCP works with the
+rule: "if DCP compliant than solvable via convex solvers relation".
+However, we encountered several problems which are known to be convex and representable
+via conic optimization but not DCP compliant, e.g., log-binomial regression. 
+Regarding the **CVX** implementations, 
+[**cvxpy**](https://www.cvxpy.org/) [@Diamond:cvxpy:2016] for Python is the main focus of the
+Stanford University Convex Optimization Group ([cvxgrp](https://github.com/cvxgrp)).
+For **R** there exists the [**CVXR**](https://cvxr.rbind.io/) package [@pkg:CVXR].
+</br></br>
+
+
+
+# Representable
+A problem is called conic representable if there exists a cone that can
+express the problem.  State of the art solvers distinguish between up to
+eight different types of cones including linear, second-order, positive semidefinite,
+power and exponential cones. 
+Therefore, if your problem is convex and comprised of linear,
+quadratic, power, exponential or log terms there is a good chance that it
+can be expressed via conic optimization. Nevertheless, note that this need not 
+be the case for any problem containing linear,
+quadratic, power, exponential or log terms (an example is presented in \@ref(subsec:cloglog)).  
+
+The definition of the cones can be found in e.g., @Diamond:2015 or @roi:theussl:2020.
+To provide more guidance on this topic we will discuss the representability
+of several GLMs in Section \@ref(sec:Examples).
+
+# Exceptions A {#ExceptionsA}
+In general conic optimization solvers are designed to solve convex optimization problems.
+However, for some non-convex problems there exist convex relaxations which make it
+possible again to solve these problems via conic optimization.
+
+
+## Mixed integer optimization
+One such exception are mixed integer optimization problems, which are non-convex.
+However, if the problem without
+the mixed integer constraint can be solved via conic optimization also
+the problem with mixed integer constraint can be solved via conic optimization.
+This is possible since the sub-problems solved within the
+branch and bound algorithm are again convex.
+
+
+# Exceptions B {#ExceptionsB}
+If the problem can not be expressed directly by the cones supported by the solvers,
+there sometimes exist equivalent problems or approximations
+which can be solved via conic optimization. An example for such an exception is 
+the binomial GLM with probit link (see \@ref(subsec:probit)).
+
+
+# Examples {#sec:Examples}
+## Binomial with logit-link (convex and representable)
+It is well known that logistic regression is a convex optimization
+problem, where the MLE is finite and unique when the data is not
+separated. More information about separation detection can be found in
+e.g., @detectseparation:logit.
+The MLE can be obtained maximizing the log-likelihood function,
+$$
+\underset{\beta}{\text{maximize}} 
+  \sum_{i \in I} X_{i*} \beta - \sum_{k \in I \cup J} \log(1 + \exp(X_{k*} \beta))
+  ~~ \text{where} ~~ I = \{i| y_i = 1\}, J = \{j| y_j = 0\}.
+$$
+Knowing that the problem is convex and looking at the log-likelihood function
+one sees that the objective is comprised sums of linear terms,
+and logarithms and exponential functions. From this information
+one can infer that there is a good chance that the problem is 
+representable by making use of the exponential cone. More information
+on modeling problems with the exponential cone can be found in
+@roi:theussl:2020, [**ROI**-homepage](https://roi.r-forge.r-project.org/)
+and the [MOSEK Modeling Cookbook](https://docs.mosek.com/modeling-cookbook/index.html).
+
+## Binomial with log-link (convex and representable)
+The log-binomial regression model (LBRM) is known to be convex,
+$$
+\begin{array}{rl}
+\underset{\beta}{\textrm{maximize}} &
+\displaystyle\sum_{i = 1}^n y_i ~ X_{i*} \beta + (1 - y_i) ~  \log(1 - \exp(X_{i*} \beta)) \\
+\textrm{subject to} &
+X \beta \leq 0.
+\end{array}
+$$
+similar to logistic regression the finiteness of the MLE depends
+on the separation of the data. However, due to the linear constraint
+$X \beta \leq 0$ the MLE of the log-binomial regression model 
+exists also for cases where the MLE of the logistic regression model
+does not exist. @log-bin:schwendinger:2021 point out the existence
+of the MLE of the log-binomial regression model can be verified by
+solving a linear optimization problem. 
+
+
+Given the MLE exists, the LBRM can be solved by making use of the linear and exponential cone.
+The linear cone is needed for the $X \beta \leq 0$ constraint.
+
+## Binomial with probit-link  (convex and non-representable) {#subsec:probit}
+The MLE of the probit model can be obtained by,
+$$
+\underset{\beta}{\text{maximize}} ~~
+  \sum_{i = 1}^n y_i ~ \log(\Phi(X_{i*} \beta)) + \sum_{i = 1}^n (1 - y_i) \log(1 - \Phi(X_{i*} \beta)).
+$$
+
+Since there exist no cone to express the cumulative normal $\Phi$,
+the problem can not be solved with conic solvers.
+@Page1977Approx gives a simple approximation
+$$
+\Phi(x) = \frac{\exp \left( 2 \sqrt{\frac{\pi}{2}} ~ x \right)}{1 + \exp \left( 2 \sqrt{\frac{\pi}{2}} ~ x \right)}.
+$$
+Using this approximation the probit model can be estimated via logistic regression
+where either the data or the estimate are re-scaled by $2 \sqrt{\frac{\pi}{2}}$.
+There exist many approximations for the cumulative normal and most of them are
+more accurate than this approximation. However, this approximation has the
+advantage that it can be expressed via conic optimization.
+
+## Binomial with cloglog-link (convex and non-representable) {#subsec:cloglog}
+The complementary log-log (cloglog) model is known to be convex and
+the MLE is finite and unique if the data is not separated
+(see e.g., @mleExistence:Silvapulle:1981 or @mleExistence:Kaufmann:1988).
+
+$$
+\underset{\beta}{\text{maximize}} ~~
+  \sum^n_{i = 1} y_i ~ \log(1 - \exp(-\exp(X_{i*} \beta))) - (1 - y_i) ~ \exp(X_{i*} \beta)
+$$
+
+Since the problem is convex and the log-likelihood is only comprised of
+$\log$ and $\exp$ terms, the problem could be representable via the exponential
+cone. However, we did not find a problem formulation that worked as expected. 
+We speculate 
+that since we have to put an exponential cone into another exponential cone
+the problem is badly scaled and therefore the solution gets unreliable.
+
+
+# References

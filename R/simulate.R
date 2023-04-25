@@ -19,10 +19,10 @@ check_all_equal_length <- function(...) {
 
 #' Construct Covariance matrix
 #'
-#' Utility function for constructing covariance matrices based on 
+#' Utility function for constructing covariance matrices based on
 #' a simple triplet format (\code{\link[slam]{simple_triplet_matrix}}).
-#' 
-#' @param k an integer giving the number of rows and columns of the constructed 
+#'
+#' @param k an integer giving the number of rows and columns of the constructed
 #'          covariance matrix.
 #' @param i an integer vector giving the row indices.
 #' @param j an integer vector giving the row indices.
@@ -30,6 +30,7 @@ check_all_equal_length <- function(...) {
 #' @return A dense \code{matrix} of covariances.
 #' @examples
 #' cov_matrix(5, c(1, 2), c(2, 3), c(0.8, 0.9))
+#' @family simulation
 #' @export
 cov_matrix <- function(k, i, j, v) {
     assert(check_all_equal_length(i, j, v))
@@ -59,6 +60,8 @@ cov_matrix <- function(k, i, j, v) {
 #' @return A \code{data.frame} (or \code{list}) containing the generated data.
 #' @examples
 #' rhglm(10, 1:5)
+#' rhglm(10, 1:5, family = binomial())
+#' @family simulation
 #' @export
 rhglm <- function(n, beta, sigma = diag(length(beta) - 1L), family = gaussian(), truncate_mu = FALSE,
                   as_list = FALSE, ...) {
@@ -76,7 +79,7 @@ rhglm <- function(n, beta, sigma = diag(length(beta) - 1L), family = gaussian(),
     mu <- family$linkinv(eta)
     if (isTRUE(truncate_mu)) {
         mu <- bound_mu(mu, family_name)
-        truncated_beta <- c(MASS::ginv(cbind(1, x)) %*% family$linkfun(mu))    
+        truncated_beta <- c(MASS::ginv(cbind(1, x)) %*% family$linkfun(mu))
     }
     y <- sim_response(family_name, n, mu)
     colnames(x) <- sprintf("x%s", seq_len(NCOL(x)))

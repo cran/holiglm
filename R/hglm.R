@@ -1,21 +1,3 @@
-#' @import slam
-#' @import stats
-#' @import ROI
-#' @import ROI.plugin.ecos
-#' @import checkmate
-#' @importFrom utils head modifyList tail str combn capture.output
-#' @aliases holiglm-package
-"_PACKAGE"
-
-
-#' @export
-ROI::as.OP
-
-
-#' @export
-ROI::solution
-
-
 # This function mimics the first part of the stats::glm function.
 get_family <- function(family) {
     if (inherits(family, "family")) return(family)
@@ -63,7 +45,8 @@ model_data <- function(formula, data, weights) {
 
 
 #
-scale_model_data <- function(md, scale=c("auto", "center_standardization", "center_minmax", "standardization", "minmax", "off"), scale_response = FALSE) {
+scale_model_data <- function(md, scale=c("auto", "center_standardization", "center_minmax", "standardization", "minmax", "off"),
+    scale_response = FALSE, family="gaussian") {
     # scale x and store the data necessary for the backtransformation in md
     scale <- match.arg(scale)
     intercept <- has_intercept(md$X)
@@ -111,14 +94,14 @@ scale_model_data <- function(md, scale=c("auto", "center_standardization", "cent
     attr(md$X, "xs") <- xs
 
     if (scale_response) {
-        if (intercept) {
-            ym <- mean(md$Y)
-        } else {
+        if (family == "gaussian") {
+            ym <- if(intercept) mean(md$Y) else 0
+            ys <- sd(md$Y)
+            if (abs(ys) <= 1e-4) ys <- 1
+        } else if (family == "poisson") { # cater for the extension with additional families
             ym <- 0
-        }
-        ys <- sd(md$Y)
-        if (abs(ys) <= 1e-4) {
-            ys <- 1
+            ydiff <- max(md$Y)
+            ys <- if(ydiff > 0L && intercept) ydiff else 1
         }
         md$Y <- md$Y - ym
         md$Y <- md$Y / ys
@@ -195,11 +178,17 @@ get_center_response <- function(model) {
     ym
 }
 
+
+is_probit <- function(family) {
+    isTRUE(family$family == "binomial") && isTRUE(family$link == "probit")
+}
+
+
 approx_inverse <- function(x, family) {
     if (family$family == "binomial") {
         if (family$link == "probit") {
             # K.D. Tocher. 1963. The art of simulation. English Universities Press, London.
-            return(x / (2 * sqrt(2/pi)))
+            return(x / (2 * sqrt(2 / pi)))
         }
     }
     x
@@ -215,7 +204,7 @@ choose_solver <- function(solver, family, is_mip = NULL, is_conic = FALSE) {
         if (!is_conic && isTRUE(family[["family"]] == "gaussian") && isTRUE(family[["link"]] == "identity")) {
             solvers <- c("ecos", "gurobi", "cplex", "mosek")
             if (!isTRUE(is_mip) && !is.null(is_mip)) {
-                solvers <- c(solvers, "qpoases", "quadprog")
+                solvers <- c(solvers, "qpoases", "quadprog", "scs", "osqp")
             }
         } else {
             solvers <- c("ecos", "mosek")
@@ -231,6 +220,10 @@ choose_solver <- function(solver, family, is_mip = NULL, is_conic = FALSE) {
 #' @title Fitting Holistic Generalized Linear Models
 #'
 #' @description Fit a generalized linear model under holistic constraints.
+#'
+#' @details In the case of binding linear constraints the standard errors are corrected,
+#'          more information about the correction can be found in
+#'          \href{https://arxiv.org/abs/2205.15447}{Schwendinger, Schwendinger and Vana (2022)}.
 #'
 #' @param formula an object of class \code{"formula"} giving the symbolic description
 #'   of the model to be fitted.
@@ -251,6 +244,9 @@ choose_solver <- function(solver, family, is_mip = NULL, is_conic = FALSE) {
 #' @param solver a character string giving the name of the solver to be used for the estimation.
 #' @param control a list of control parameters passed to \code{ROI_solve}.
 #' @param dry_run a logical; if \code{TRUE} the model is not fit but only constructed.
+#' @param object_size a character string giving the object size, allowed values
+#'  are \code{"normal"} and \code{"big"}. If \code{"big"} is choosen, also
+#'  the \pkg{ROI} solution and the \code{"hglm_model"} object are returned.
 #' @return An object of class \code{"hglm"} inheriting from \code{"glm"}.
 #' @examples
 #' dat <- rhglm(100, c(1, 2, -3, 4, 5, -6))
@@ -261,14 +257,40 @@ choose_solver <- function(solver, family, is_mip = NULL, is_conic = FALSE) {
 #' hglm(y ~ ., constraints = k_max(3), data = dat)
 #' # estimation without intercept
 #' hglm(y ~ . - 1, data = dat)
+#'
+#' @references
+#' Schwendinger B., Schwendinger F., Vana L. (2022).
+#' Holistic Generalized Linear Models
+#' \doi{10.48550/arXiv.2205.15447}
+#'
+#' Bertsimas, D., & King, A. (2016).
+#' OR Forum-An Algorithmic Approach to Linear Regression
+#' Operations Research 64(1):2-16.
+#' \doi{10.1287/opre.2015.1436}
+#'
+#' McCullagh, P., & Nelder, J. A. (2019).
+#' Generalized Linear Models (2nd ed.)
+#' Routledge.
+#' \doi{10.1201/9780203753736}.
+#'
+#' Dobson, A. J., & Barnett, A. G. (2018).
+#' An Introduction to Generalized Linear Models (4th ed.)
+#' Chapman and Hall/CRC.
+#' \doi{10.1201/9781315182780}
+#'
+#' Chares, Robert. (2009).
+#' “Cones and Interior-Point Algorithms for Structured Convex Optimization involving Powers and Exponentials.”
+#'
 #' @rdname hglm
+#' @name hglm
 #' @export
 hglm <- function(formula, family = gaussian(), data, constraints = NULL,
                  weights = NULL, scaler = c("auto", "center_standardization",
                  "center_minmax", "standardization", "minmax", "off"),
                  scale_response = NULL, big_m = 100, solver = "auto", control = list(),
-                 dry_run = FALSE) {
+                 dry_run = FALSE, object_size = c("normal", "big")) {
     tstart <- Sys.time()
+    object_size <- match.arg(object_size)
     constraints <- as.lohglmc(constraints)
     if (length(constraints) == 0L) constraints <- NULL
     if (missing(data)) {
@@ -285,8 +307,8 @@ hglm <- function(formula, family = gaussian(), data, constraints = NULL,
             scale_response <- FALSE
         }
     }
-    if (scale_response && family$family != "gaussian") {
-        msg <- c("Scaling the response is only available for family gaussian().\n  ",
+    if (scale_response && !any(family$family %in% c("gaussian", "poisson"))) {
+        msg <- c("Scaling the response is only available for families gaussian() and poisson().\n  ",
                  sprintf("Deactivated scaling response for family %s(%s).", family$family, family$link))
         warning(msg)
         scale_response <- FALSE
@@ -295,17 +317,22 @@ hglm <- function(formula, family = gaussian(), data, constraints = NULL,
     if ((attr(md[["mt"]], "intercept") == 0L) && scaler == "auto") {
         scaler <- "off"
     }
-    md <- scale_model_data(md, scaler, scale_response = scale_response)
+    if (is_probit(family)) {
+        md$X <- md$X * (2 * sqrt(2 / pi))  # K.D. Tocher. 1963. The art of simulation. English Universities Press, London.
+    }
+
+    md <- scale_model_data(md, scaler, scale_response = scale_response, family = family$family)
     tstart_model <- Sys.time()
     model <- hglm_model(x = md$X, y = md$Y, family = family, weights = md$weights,
                         frame = md$mf, solver = solver)
     model_build_time <- Sys.time() - tstart_model  # contains building the likelihood
-    fit <- hglm_fit(model, constraints = constraints, solver = solver, control = control,
-                    dry_run = dry_run)
+    model[["scaler"]] <- scaler
+    fit <- hglm_fit(model, constraints = constraints, big_m = big_m, solver = solver,
+                    control = control, dry_run = dry_run, object_size = object_size)
     if (isTRUE(dry_run)) return(fit)
     total_time <- Sys.time() - tstart
     fit$timing <- c(fit$timing, model_build_time = model_build_time, total_time = total_time)
-    solver <- ROI::solution(fit[["roi_solution"]], "status")[["msg"]][["solver"]]
+    solver <- fit[["solution_status"]][["msg"]][["solver"]]
     structure(c(fit, list(call = cal, formula = formula, terms = md$mt,
                 data = data, constraints = constraints, control = control,
                 solver = solver, contrasts = attr(md$X, "contrasts"),
@@ -315,18 +342,35 @@ hglm <- function(formula, family = gaussian(), data, constraints = NULL,
 
 
 #' @rdname hglm
+#' @name holiglm
 #' @export
 holiglm <- hglm
 
 
 #' @param k_seq an integer vector giving the values of \code{k_max} for which the model
 #'              should be estimated.
+#' @param parallel whether estimation of sequence shall be parallelized
 #' @rdname hglm
+#' @name hglm_seq
+#' @references
+#' Chen, J., & Chen, Z. (2008).
+#' Extended Bayesian information criteria for model selection with large model spaces.
+#' Biometrika, 95 (3): 759–771.
+#' Oxford University Press.
+#' \doi{10.1093/biomet/asn034}
+#'
+#' Zhu, J., Wen, C., Zhu, J., Zhang, H., & Wang, X. (2020).
+#' A polynomial algorithm for best-subset selection problem.
+#' Proceedings of the National Academy of Sciences, 117 (52): 33117–33123.
+#' \doi{10.1073/pnas.2014241117}
+#'
 #' @export
 hglm_seq <- function(k_seq, formula, family = gaussian(), data, constraints = NULL,
                      weights = NULL, scaler = c("auto", "center_standardization",
                      "center_minmax", "standardization", "minmax", "off"),
-                     big_m = 100, solver = "auto", control = list()) {
+                     big_m = 100, solver = "auto", control = list(), object_size = c("normal", "big"),
+                     parallel = FALSE) {
+    object_size <- match.arg(object_size)
     scaler <- match.arg(scaler)
     constraints <- as.lohglmc(constraints)
     moma <- model.matrix(formula, data = data)
@@ -347,13 +391,40 @@ hglm_seq <- function(k_seq, formula, family = gaussian(), data, constraints = NU
     i <- which("k_max" == connames(constraints))
     if (length(i) > 1L) stop("multiple k_max defined")
     fits <- vector("list", length(k_seq))
-    for (j in seq_along(k_seq)) {
-        constraints[[i]] <- k_max(k_seq[j])
-        fit <- hglm(formula = formula, family = family, data = data, constraints = constraints,
+
+    stopf = function(fmt, ..., domain = "R-holiglm") stop(gettextf(fmt, ..., domain = domain), domain = NA, call. = FALSE)
+
+    if (parallel) {
+        if (!requireNamespace("parallel", quietly = TRUE))
+            stopf("Using hglm_seq with parallel=TRUE requires 'parallel' package. Please install 'parallel' or switch off parallel computing.")
+        for (j in seq_along(k_seq)) {
+            constraints[[i]] <- k_max(k_seq[j])
+            fits[[j]] <- parallel::mcparallel({
+                fit <- hglm(formula = formula, family = family, data = data, constraints = constraints,
                     weights = weights, scaler = scaler, big_m = big_m, solver = solver,
-                    control = control)
-        fit[["k_max"]] <- k_seq[j]
-        fits[[j]] <- fit
+                    control = control, object_size = object_size)
+                fit[["k_max"]] <- k_seq[j]
+                fit
+            })
+        }
+    } else {
+        for (j in seq_along(k_seq)) {
+            constraints[[i]] <- k_max(k_seq[j])
+            fit <- hglm(formula = formula, family = family, data = data, constraints = constraints,
+                    weights = weights, scaler = scaler, big_m = big_m, solver = solver,
+                    control = control, object_size = object_size)
+            fit[["k_max"]] <- k_seq[j]
+            fits[[j]] <- fit
+        }
+    }
+    if (parallel) {
+        fork.res = tryCatch(parallel::mccollect(fits))
+        ## check for any errors in FUN, warnings are silently ignored
+        fork.err = vapply(fork.res, inherits, FALSE, "try-error", USE.NAMES=FALSE)
+        if (any(fork.err))
+            stopf("hglm_seq received an error(s) when evaluating FUN:\n%s",
+                paste(unique(vapply(fork.res[fork.err], function(err) attr(err,"condition",TRUE)[["message"]], "", USE.NAMES=FALSE)), collapse="\n"))
+        fits = unname(fork.res)
     }
     class(fits) <- "hglm_seq"
     fits
@@ -365,6 +436,23 @@ get_k_max <- function(x) {
     x$constraints[[i]][["k_max"]]
 }
 
+# BIC <- function(object, ...) {
+#     lls <- logLik(object)
+#     -2 * as.numeric(lls) + attr(lls, "df") * log(nobs(lls))
+# }
+
+EBIC <- function(object, ..., g = 1) {
+    assert_numeric(g, lower=0, upper=1)
+    lls <- logLik(object)
+    -2 * as.numeric(lls) + log(nobs(lls)) * attr(lls, "df") + 2 * g * log(lchoose(length(coef(object)), attr(lls, "df")-2L))
+}
+
+SIC <- function(object, ...) {
+    lls <- logLik(object)
+    n <- nobs(object)
+    n * as.numeric(lls) + log(NCOL(attr(object$terms, "factors"))) * log(log(n)) * (attr(lls, "df")-1L)
+}
+
 
 #' @noRd
 #' @export
@@ -372,7 +460,9 @@ print.hglm_seq <- function(x, ...) {
     k_max <- sapply(x, get_k_max)
     aic <- round(sapply(x, AIC), 2L)
     bic <- round(sapply(x, BIC), 2L)
-    d <- cbind(k_max = k_max, aic = aic, bic = bic, do.call(rbind, lapply(x, coefficients)))
+    ebic <- round(sapply(x, EBIC), 2L)
+    sic <- round(sapply(x, SIC))
+    d <- cbind(k_max = k_max, aic = aic, bic = bic, ebic = ebic, sic=sic, do.call(rbind, lapply(x, coefficients)))
     d <- d[order(d[, "k_max"], decreasing = TRUE), , drop = FALSE]
     d <- as.data.frame(d)
     writeLines("HGLM Fit Sequence:")
@@ -439,14 +529,20 @@ add_constraints <- function(model, constraints, bigM) {
 #' @param solver a character string giving the name of the solver to be used for the estimation.
 #' @param control a list of control parameters passed to \code{ROI_solve}.
 #' @param dry_run a logical if \code{TRUE} the model is not fit but only constructed.
+#' @param object_size a character string giving the object size, allowed values
+#'  are \code{"normal"} and \code{"big"}. If \code{"big"} is choosen, also
+#'  the \pkg{ROI} solution and the \code{"hglm_model"} object are returned.
 #' @examples
 #' dat <- rhglm(100, c(1, 2, -3, 4, 5, -6))
 #' x <- model.matrix(y ~ ., data = dat)
 #' model <- hglm_model(x, y = dat[["y"]])
 #' fit <- hglm_fit(model, constraints = k_max(3))
 #' @return an object of class \code{"hglm.fit"} inheriting from \code{"glm"}.
+#' @name hglm_fit
 #' @export
-hglm_fit <- function(model, constraints = NULL, big_m, solver = "auto", control = list(), dry_run = FALSE) {
+hglm_fit <- function(model, constraints = NULL, big_m, solver = "auto", control = list(),
+                     dry_run = FALSE, object_size = c("normal", "big")) {
+    object_size <- match.arg(object_size)
     constraints <- as.lohglmc(constraints)
     if (missing(big_m)) {
         big_m <- get_big_m(constraints, default = 100)
@@ -456,7 +552,7 @@ hglm_fit <- function(model, constraints = NULL, big_m, solver = "auto", control 
     model <- add_constraints(model, constraints, big_m)
     if (isTRUE(dry_run)) return(model)
     tstart <- Sys.time()
-    op <- as.OP(model)
+    op <- as.OP(x = model)
     op_build_time <- Sys.time() - tstart
     is_mip <- any("big_m" == connames(model[["constraints"]]))
     is_conic <- ROI::is.C_constraint(ROI::constraints(op))
@@ -471,16 +567,21 @@ hglm_fit <- function(model, constraints = NULL, big_m, solver = "auto", control 
       L <- L_binding_constraints(op, solu)
       L <- L[, seq_len(NCOL(model$x)), drop = FALSE]
       model$correction_se <- MASS::Null(t(L))
-      if (any(startsWith(names(model[["constraints"]]), "equal_sign"))) {
-        warning("the standard error correction might be wrong for 'sign_coherence' constraints!")
-      }
+      warning("In hglm_fit: Binding linear constraints detected. ",
+              "The standard errors are corrected as described in the vignettes.",
+              call. = FALSE)
     }
-    fit <- new_hglm_fit(model, roi_solution = solu)
+    fit <- new_hglm_fit(model, roi_solution = solu, object_size = object_size, boundary = any(bicon))
     fit$timing <- c(op_build_time = op_build_time, solve_time = op_solve_time)
     if (any(abs(fit[["coefficients_scaled"]]) >= (big_m - 1e-4))) {
-        warning("At least one of the Big-M constraints is binding!",
-                " Increase the 'big_m' value and repeat the estimation.")
+        warning("In hglm_fit: At least one of the Big-M constraints is binding! ",
+                "Increase the 'big_m' value and repeat the estimation.")
         fit[["coefficients"]] <- rep.int(NA_real_, length(fit[["coefficients"]]))
+    }
+    if (!fit$converged) {
+        status <- fit[["solution_status"]]
+        warning(sprintf("In hglm_fit: Solver '%s' reported the following error: %s",
+                        status[["msg"]][["solver"]], status[["msg"]][["message"]]))
     }
     fit
 }
@@ -489,7 +590,7 @@ hglm_fit <- function(model, constraints = NULL, big_m, solver = "auto", control 
 # create a new hglm fit object
 # currently we use the refit version
 # roi_solution <- solu
-new_hglm_fit <- function(model, roi_solution) {
+new_hglm_fit <- function(model, roi_solution, object_size, boundary = FALSE) {
     intercept <- has_intercept(model)
     x_scaled <- model$x; x <- unscale_model_data(x_scaled)
     y_scaled <- model$y; y <- unscale_response(y_scaled)
@@ -516,20 +617,28 @@ new_hglm_fit <- function(model, roi_solution) {
     coeffi <- setNames(coeffi_scaled / get_scale(model), colnames(x))
 
     if (intercept) {
-        coeffi[1] <- coeffi_scaled[1] - sum(coeffi_scaled[-1] / get_scale(model)[-1] * get_center(model)[-1])
+        if (is_probit(family)) {
+            correction <- sum(coeffi_scaled[-1] / get_scale(model)[-1] * get_center(model)[-1]) / (2 * sqrt(2 / pi))
+        } else {
+            correction <- sum(coeffi_scaled[-1] / get_scale(model)[-1] * get_center(model)[-1])
+        }
+        coeffi[1] <- coeffi_scaled[1] - correction
     }
 
     # change coefficients due to scaled response
     ym <- get_center_response(model); ys <- get_scale_response(model)
     if (ym != 0 || ys != 1) {
-        coeffi <- coeffi * ys
-        if (intercept) {
-            coeffi[1] <- coeffi[1] + ym
+        if (family[["link"]] != "log") {
+            coeffi <- coeffi * family$linkfun(ys)
+            if (intercept) coeffi[1] <- coeffi[1] + family$linkfun(ym)
+        } else {
+            if (intercept) coeffi[1] <- coeffi[1] + family$linkfun(ys)
+            # else coeffi <- coeffi + abs(sign(round(coeffi, 5))) * family$linkfun(ys) # deactivated scaling response for no intercept
         }
     }
 
-    coeffi_scaled <- approx_inverse(coeffi_scaled, family)
-    coeffi <- approx_inverse(coeffi, family)
+    #DELME: coeffi_scaled <- approx_inverse(coeffi_scaled, family)
+    #DELME: coeffi <- approx_inverse(coeffi, family)
 
     linkinv <- family$linkinv
     nobs <- NROW(y)
@@ -574,19 +683,32 @@ new_hglm_fit <- function(model, roi_solution) {
 
     aic.model <- family$aic(y, model$n, mu, weights, dev) + 2 * rank
 
-    boundary <- NA  # FIXME: I have to think what this means in general.
     resdf <- n.ok - rank
 
-    fit <- list(coefficients = coeffi, coefficients_scaled = coeffi_scaled,
-                residuals = residuals, fitted.values = mu,
-                effects = effects, R = R, rank = rank, qr = qr,
-                family = family, linear.predictors = eta, deviance = dev,
-                aic = aic.model, null.deviance = nulldev, iter = iter,
-                weights = wt, prior.weights = setNames(weights, ynames),
-                df.residual = resdf, df.null = nulldf, y = setNames(y, ynames),
-                converged = conv, boundary = boundary, coefficients.selected = is_active,
-                roi_solution = roi_solution, 
-                hglm_model = model)
+    solution_status <- ROI::solution(roi_solution, "status")
+
+    if (object_size == "big") {
+        fit <- list(coefficients = coeffi, coefficients_scaled = coeffi_scaled,
+                    residuals = residuals, fitted.values = mu,
+                    effects = effects, R = R, rank = rank, qr = qr,
+                    family = family, linear.predictors = eta, deviance = dev,
+                    aic = aic.model, null.deviance = nulldev, iter = iter,
+                    weights = wt, prior.weights = setNames(weights, ynames),
+                    df.residual = resdf, df.null = nulldf, y = setNames(y, ynames),
+                    converged = conv, boundary = boundary, coefficients.selected = is_active,
+                    roi_solution = roi_solution, solution_status = solution_status,
+                    hglm_model = model)
+    } else {
+        fit <- list(coefficients = coeffi, coefficients_scaled = coeffi_scaled,
+                    residuals = residuals, fitted.values = mu,
+                    effects = effects, R = R, rank = rank, qr = qr,
+                    family = family, linear.predictors = eta, deviance = dev,
+                    aic = aic.model, null.deviance = nulldev, iter = iter,
+                    weights = wt, prior.weights = setNames(weights, ynames),
+                    df.residual = resdf, df.null = nulldf, y = setNames(y, ynames),
+                    converged = conv, boundary = boundary, coefficients.selected = is_active,
+                    solution_status = solution_status)
+    }
 
     structure(fit, class = c("hglm.fit", "glm", "lm"))
 }
@@ -603,6 +725,8 @@ new_hglm_fit <- function(model, roi_solution) {
 #'
 #' @description Create a HGLM model object.
 #'
+#' @details No standardization prior to fitting the model takes place. If a x or y standardization is wanted, the user has to do this beforehand.
+#'
 #' @param x a numeric matrix giving the design matrix.
 #' @param y a vector giving the response variables.
 #' @param family a description of the error distribution and link function to be used in the model.
@@ -614,8 +738,9 @@ new_hglm_fit <- function(model, roi_solution) {
 #' x <- model.matrix(y ~ ., data = dat)
 #' hglm_model(x, y = dat[["y"]])
 #' @return An object of class \code{"hglm_model"}.
+#' @name hglm_model
 #' @export
-hglm_model <- function(x, y, family = gaussian(), weights = NULL, frame = NULL, solver="auto") {
+hglm_model <- function(x, y, family = gaussian(), weights = NULL, frame = NULL, solver = "auto") {
     assert(check_class(family, "family"))
     assert_true(NROW(x) == NROW(y))
     assert_true(NROW(x) > 0)
@@ -628,14 +753,14 @@ hglm_model <- function(x, y, family = gaussian(), weights = NULL, frame = NULL, 
     }
     ynames <- if (is.matrix(y)) rownames(y) else names(y)
     nobs <- NROW(y)
-    nvars <- ncol(x)
+    nvars <- ncol(x)  # used in in initialize
     if (is.null(weights)) {
         weights <- rep.int(1, nobs)
     }
     offset <- rep.int(0, nobs)
-    variance <- family$variance
-    linkinv <- family$linkinv
-    etastart <- NULL
+    variance <- family$variance  # used in in initialize
+    linkinv <- family$linkinv  # used in in initialize
+    etastart <- NULL  # used in in initialize
     n <- NULL  # fix so R CMD check does not compare.
     eval(family$initialize)
     # glm.fit like - init - END
@@ -659,7 +784,7 @@ hglm_model <- function(x, y, family = gaussian(), weights = NULL, frame = NULL, 
     model <- list(x = x, y = y, family = family, weights = weights, frame = frame, n = n,
                   offset = offset, ynames = ynames, nvars = op[["n_of_variables"]],
                   variable_categories = variable_categories, variable_names = variable_names,
-                  loglikelihood = op, constraints = list(), types = dense_types(op))
+                  loglikelihood = op, constraints = list(), types = dense_types(op), scaler = "off")
     class(model) <- "hglm_model"
     model
 }
@@ -681,6 +806,11 @@ update_nvars.L_constraint <- function(x, nvar) {
     x
 }
 
+update_nvars.C_constraint <- function(x, nvar) {
+    x[["L"]][["ncol"]] <- nvar
+    x[["L"]][["dimnames"]] <- list(NULL, NULL)
+    x
+}
 
 is_bigM_required <- function(constraints) {
     is_required <- function(x) {
@@ -693,10 +823,24 @@ is_bigM_required <- function(constraints) {
 
 #' @title Convert to OP
 #'
-#' @description Convert an object of class \code{hglm_model} to \code{ROI::OP}.
+#' @description Convert an object of class \code{"hglm_model"} into a \pkg{ROI} optimization problem (\code{\link[ROI]{OP}}).
+#' @details
+#' This function is mainly for internal use and advanced users which want of
+#' alter the model object or the underlying optimization problem.
+#' This function converts the model object created by \code{\link{hglm_model}}
+#' into a conic optimization problem solveable via \code{\link[ROI]{ROI_solve}}.
 #' @param x an object inheriting from \code{"hglm_model"}.
 #' @return A \pkg{ROI} object of class \code{"OP"}.
-#' @export
+#' @examples
+#' dat <- rhglm(100, c(1, 2, -3, 4, 5, -6))
+#' # Use hglm with option dry_run
+#' model <- hglm(y ~ ., data = dat, dry_run = TRUE)
+#' op <- as.OP(model)
+#' # User hglm_model
+#' x <- model.matrix(y ~ ., data = dat)
+#' model <- hglm_model(x, dat[["y"]])
+#' op <- as.OP(model)
+#' @name as.OP.hglm_model
 #' @export
 as.OP.hglm_model <- function(x) {
     op <- x$loglikelihood
@@ -708,29 +852,30 @@ as.OP.hglm_model <- function(x) {
         return(op)
     }
 
+    nvars <- max(c(nvar(op), as.integer(lapply(x[["constraints"]], nvar.constraint))))
     for (i in seq_along(x[["constraints"]])) {
         prefix <- names(x[["constraints"]])[i]
         iseq <- seq_len(nrow(x[["constraints"]][[i]]))
         row_names[[i + 1]] <- sprintf("%s_%i", prefix, iseq)
-        x[["constraints"]][[i]] <- update_nvars(x[["constraints"]][[i]], x[["nvars"]])
+        x[["constraints"]][[i]] <- update_nvars(x[["constraints"]][[i]], nvars)
     }
     constr <- do.call(rbind, x$constraints)
     row_names <- do.call(c, row_names)
 
     if (!is.null(op$objective$L)) {
-        op$objective$L$ncol <- x[["nvars"]]
+        op$objective$L$ncol <- nvars
     }
     # Q needs to be PSD
     if (!is.null(op$objective$Q)) {
-        op$objective$Q$nrow <- x[["nvars"]]
-        op$objective$Q$ncol <- x[["nvars"]]
+        op$objective$Q$nrow <- nvars
+        op$objective$Q$ncol <- nvars
     }
     # set length of ROI objective
-    attr(op$objective, "nobj") <- x[["nvars"]]
+    attr(op$objective, "nobj") <- nvars
     op$objective$names <- NULL
-    op$n_of_variables <- x[["nvars"]]
+    op$n_of_variables <- nvars
     op$types <- x$types
-    op$constraints$L$ncol <- x[["nvars"]]
+    op$constraints$L$ncol <- nvars
     dimnames(op$constraints$L) <- NULL
     dimnames(op$objective$L) <- NULL
     dimnames(op$objective$Q) <- NULL
@@ -740,17 +885,25 @@ as.OP.hglm_model <- function(x) {
     } else {
         op$constraints <- rbind(op$constraints, constr)
     }
-    op[["objective"]][["names"]] <- x[["variable_names"]]
-    op[["constraints"]][["names"]] <- x[["variable_names"]]
-    op[["row_names"]] <- row_names
+    op[["n_of_constraints"]] <- NROW(op$constraints)
+
+    n_new <- nvars - length(x[["variable_names"]])
+    variable_names <- c(x[["variable_names"]], sprintf("AUX_%i", seq_len(n_new)))
+    op[["objective"]][["names"]] <- variable_names
+    op[["constraints"]][["names"]] <- variable_names
+    if (op[["n_of_constraints"]] == length(row_names)) {
+        op[["row_names"]] <- row_names
+    } else {
+        stop("dimension missmatch in as.OP")
+    }
     op
 }
 
 
 print.hglm_model <- function(x, ...) {
     writeLines(sprintf("Holistic Generalized Linear Model"))
-    writeLines(sprintf("  - Family: %s", x$family))
-    writeLines(sprintf("  - Link function: %s", x$link))
+    writeLines(sprintf("  - Family: %s", x$family$family))
+    writeLines(sprintf("  - Link function: %s", x$family$link))
     writeLines("  - Constraints")
     if (length(x$constraints) == 0L) {
         writeLines("    + No constaints added.")
@@ -787,6 +940,9 @@ constraint_name <- function(names, prefix) {
 # @return An object of class \code{"hglm_model"}.
 # export
 add_bigm_constraint <- function(model, big_m = 1000) {
+    if (any(names(model[["variable_categories"]]) == "constr.big_m")) {
+        return(model)
+    }
     p <- ncol(model$x)  # number of covariates
     nobj <- model[["nvars"]]
     vcat <- model[["variable_categories"]]
@@ -1129,7 +1285,6 @@ add_pairwise_multicollinearity_constraint <- function(
     exclude = "(Intercept)",
     use = c("everything", "all.obs", "complete.obs", "na.or.complete", "pairwise.complete.obs"),
     method = c("pearson", "kendall", "spearman")) {
-    # FIXME: simplify code
     use <- match.arg(use)
     method <- match.arg(method)
     idx <- match(exclude, colnames(model[["x"]]))
@@ -1206,3 +1361,23 @@ add_pairwise_multicollinearity_equal_sign_constraint <- function(
     model
 }
 
+
+#' Update the Model Object
+#'
+#' @param model an object inheriting from \code{"hglm_model"}.
+#' @param op an \code{\link[ROI]{OP}} giving the new objective.
+#'
+#' @export
+update_objective <- function(model, op) {
+    checkmate::assert_class(model, "hglm_model")
+    checkmate::assert_class(op, "OP")
+    p <- ncol(model$x)
+    model[["loglikelihood"]] <- op
+    nvars <- model[["nvars"]] <- op[["n_of_variables"]]
+    ind_logli_aux <- seq(p + 1L, model[["nvars"]])
+    model[["variable_categories"]][["logli.aux"]] <- ind_logli_aux
+    model[["variable_names"]] <- c(model[["variable_names"]][seq_len(p)],
+                                   sprintf("logli.aux%i", seq_len(nvars - p)))
+    model[["types"]] <- dense_types(op)
+    model
+}

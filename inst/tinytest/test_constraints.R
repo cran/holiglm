@@ -7,7 +7,7 @@ suppressPackageStartupMessages(library("holiglm"))
 Sys.setenv(ROI_LOAD_PLUGINS = FALSE)
 suppressPackageStartupMessages(library("ROI"))
 
-applicable_solvers <- c("ecos", "mosek")
+applicable_solvers <- c("ecos")
 installed_solvers <- ROI_installed_solvers()
 solver <- sample(installed_solvers[names(installed_solvers) %in% applicable_solvers], 1L)
 require(solver, character.only = TRUE)

@@ -7,7 +7,7 @@
 cov_matrix(k, i, j, v)
 }
 \arguments{
-\item{k}{an integer giving the number of rows and columns of the constructed 
+\item{k}{an integer giving the number of rows and columns of the constructed
 covariance matrix.}
 
 \item{i}{an integer vector giving the row indices.}
@@ -20,9 +20,14 @@ covariance matrix.}
 A dense \code{matrix} of covariances.
 }
 \description{
-Utility function for constructing covariance matrices based on 
+Utility function for constructing covariance matrices based on
 a simple triplet format (\code{\link[slam]{simple_triplet_matrix}}).
 }
 \examples{
 cov_matrix(5, c(1, 2), c(2, 3), c(0.8, 0.9))
 }
+\seealso{
+Other simulation: 
+\code{\link{rhglm}()}
+}
+\concept{simulation}

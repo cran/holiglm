@@ -1,9 +1,24 @@
 
 nvar <- function(x) UseMethod("nvar")
-nvar <- function(x) x[["n_of_variables"]]
+
+nvar.OP <- function(x) x[["n_of_variables"]]
+
+nvar.objective <- function(x) {
+    attr(x, "nobj")
+}
+
+nvar.constraint <- function(x) {
+    if (is.F_constraint(x)) {
+        NA_integer_
+    } else {
+        ncol(x[["L"]])
+    }
+}
+
 
 ncon <- function(x) UseMethod("ncon")
-ncon <- function(x) x[["n_of_constraints"]]
+
+ncon.OP <- function(x) x[["n_of_constraints"]]
 
 
 dim.OP <- function(x) c(ncon(x), nvar(x))
@@ -27,40 +42,49 @@ niter <- function(roi_solution) {
 }
 
 
+# We want to detect the linear binding constraints for which
+# we should alter the standard error.
 binding_constraints <- function(op, solu, tol = 1e-4) {
-    k <- grep("^(linear_constraint|lower_bound|upper_bound)_\\d+", op[["row_names"]])
-    if (length(k) == 0L) return(NULL)
-    if (is.C_constraint(constraints(op))) {
-        con <- constraints(op)
-        L <- con[["L"]][k,]
-        dir <- c("==", "<=")[con[["cones"]][["cone"]][k]]
-        rhs <- con[["rhs"]][k]
-    } else if (is.L_constraint(constraints(op))) {
-        con <- constraints(op)
-        L <- con[["L"]][k,]
-        dir <- con[["dir"]][k]
-        rhs <- con[["rhs"]][k]
+    con <- constraints(op)
+    pattern <- "^(linear_constraint|lower_bound|upper_bound|logli)_\\d+"
+    is_not_big_m <- grepl(pattern, op[["row_names"]])
+    if (is.C_constraint(con)) {
+        is_linear <- con[["cones"]][["cone"]] %in% c(1L, 2L)
+        checkmate::assert_true(length(is_not_big_m) == length(is_linear))
+        k <- which(is_not_big_m & is_linear)
+    } else if (is.L_constraint(con)) {
+        k <- which(is_not_big_m)
+    } else if (is.NO_constraint(con)) {
+        k <- logical(0)
     } else {
         stop("unsupported constraint type")
     }
+    if (length(k) == 0L) return(NULL)
+    L <- con[["L"]][k, ]
+    rhs <- con[["rhs"]][k]
     s <- solution(solu, force = TRUE)
     abs(drop(as.matrix(L) %*% s) - rhs) < tol
 }
 
 
 L_binding_constraints <- function(op, solu, tol = 1e-4) {
-    k <- grep("^(linear_constraint|group_equal|lower_bound|upper_bound)_\\d+", op[["row_names"]])
-    if (length(k) == 0L) return(NULL)
+    con <- constraints(op)
+    pattern <- "^(linear_constraint|lower_bound|upper_bound|logli)_\\d+"
+    is_not_big_m <- grepl(pattern, op[["row_names"]])
     if (is.C_constraint(constraints(op))) {
-        con <- constraints(op)
+        is_linear <- con[["cones"]][["cone"]] %in% c(1L, 2L)
+        checkmate::assert_true(length(is_not_big_m) == length(is_linear))
+        k <- which(is_not_big_m & is_linear)
+        if (nrow(con) == 0L) return(NULL)
         L <- as.matrix(con[["L"]][k, ])
         dir <- c("==", "<=")[con[["cones"]][["cone"]][k]]
         rhs <- con[["rhs"]][k]
     } else if (is.L_constraint(constraints(op))) {
-        con <- constraints(op)
-        L <- as.matrix(con[["L"]][k, ])
-        dir <- con[["dir"]][k]
-        rhs <- con[["rhs"]][k]
+        k <- which(is_not_big_m)
+        if (nrow(con) == 0L) return(NULL)
+        L <- as.matrix(con[["L"]])
+        dir <- con[["dir"]]
+        rhs <- con[["rhs"]]
         if (any(b <- ">=" == dir)) {
             L[b, ] <- -L[b, ]
             rhs[b] <- -rhs[b]
@@ -74,7 +98,7 @@ L_binding_constraints <- function(op, solu, tol = 1e-4) {
     L[is_bind, , drop = FALSE]
 }
 
-             
+
 ROI_is_registered <- function(solver) {
     isTRUE(solver %in% names(ROI::ROI_registered_solvers()))
 }
@@ -107,7 +131,7 @@ ROI_require_solver <- function(solver) {
 
 #' @title Extract Solution
 #'
-#' @description The solution of the underlying optimization problem, 
+#' @description The solution of the underlying optimization problem,
 #'  can be accessed via the method \code{'solution'}.
 #'
 #' @param x an object of type \code{'hglm'}.

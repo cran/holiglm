@@ -46,10 +46,14 @@ A holistic generalized model constraint, object inheriting from class \code{"hgl
 Ensures that coefficients of covariates which exhibit strong pairwise correlation
 have a coherent sign.
 }
+\examples{
+constraints <- c(k_max(7), pairwise_sign_coherence())
+}
 \references{
-Carrizosa E, Olivares-Nadal AV, Ramirez-Cobo P (2020) <doi:10.2436/20.8080.02.95>.
-Integer constraints for enhancing interpretability in linear regression.
-SORT-Statistics and Operations Research Transactions.
+Carrizosa, E., Olivares-Nadal, A. V., & Ramírez-Cobo, P. (2020).
+Integer Constraints for Enhancing Interpretability in Linear Regression.
+SORT. Statistics and Operations Research Transactions, 44: 67-98.
+\doi{10.2436/20.8080.02.95}.
 }
 \seealso{
 Other Constraint-Constructors: 
