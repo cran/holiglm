@@ -26,7 +26,7 @@
 #' 
 #' @references Fanaee-T, Hadi. (2013). Bike Sharing Dataset. UCI Machine Learning Repository.
 #'
-#' @source \url{https://www.ics.uci.edu/~mlearn/MLRepository.html}
+#' @source \url{https://archive.ics.uci.edu/}
 #' @name bike
 #' @examples
 #' data("bike")

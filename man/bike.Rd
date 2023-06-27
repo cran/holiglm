@@ -23,7 +23,7 @@ to related bikes.
 }
 }
 \source{
-\url{https://www.ics.uci.edu/~mlearn/MLRepository.html}
+\url{https://archive.ics.uci.edu/}
 }
 \description{
 This data set contains the daily count of rented bikes from the the Capital Bikeshare system

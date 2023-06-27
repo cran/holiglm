@@ -34,6 +34,24 @@ model <- hglm(y~., family=gaussian(), df, constraints=NULL, scaler="off")
 coef0 <- unname(coef(model))
 expect_equal(coef0, coef1, tolerance=1e-4)
 
+### predict
+df <- as.data.frame(data$x[,-1])
+df$y <- data$y
+model <- hglm(y~., family=gaussian(), df, constraints=NULL, scaler="off")
+gmodel <- glm(y~., family=gaussian(), df)
+expect_equal(predict(model, type="link"), predict(gmodel, type="link"), tolerance=1e-4)
+expect_equal(predict(model, newdata=df[21:30,], type="link"), predict(gmodel, newdata=df[21:30,], type="link"), tolerance=1e-4)
+expect_equal(predict(model, type="response"), predict(gmodel, type="response"), tolerance=1e-4)
+expect_equal(predict(model, newdata=df[21:30,], type="response"), predict(gmodel, newdata=df[21:30,], type="response"), tolerance=1e-4)
+
+### predict sparse
+model <- hglm(mpg ~ ., family=gaussian(), data=mtcars, constraints=k_max(1))
+gmodel <- glm(mpg ~ wt, family=gaussian(), data=mtcars)
+expect_equal(predict(model, type="link"), predict(gmodel, type="link"), tolerance=1e-4)
+expect_equal(predict(model, newdata=mtcars[1:10,], type="link"), predict(gmodel, newdata=mtcars[1:10,], type="link"), tolerance=1e-4)
+expect_equal(predict(model, type="response"), predict(gmodel, type="response"), tolerance=1e-4)
+expect_equal(predict(model, newdata=mtcars[1:10,], type="response"), predict(gmodel, newdata=mtcars[1:10,], type="response"), tolerance=1e-4)
+
 # scaling predictors
 model_center_standardization <- hglm(y~., family=gaussian(), df, constraints=NULL, scaler="center_standardization")
 model_center_minmax <- hglm(y~., family=gaussian(), df, constraints=NULL, scaler="center_minmax")

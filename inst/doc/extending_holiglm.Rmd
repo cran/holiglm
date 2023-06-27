@@ -1,6 +1,6 @@
 ---
 title: "Extending the holiglm package"
-date: "2023-04-24"
+date: "2023-04-18"
 output: 
   rmarkdown::html_vignette:
     number_sections: true
@@ -122,7 +122,17 @@ To solve the altered model, function `hglm_fit()` can be used.
 
 ```r
 hglm_fit(model)
-#> Error in as.OP.hglm_model(x = model): dimension missmatch in as.OP
+#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
+#> 
+#> Call:  NULL
+#> 
+#> Coefficients:
+#> (Intercept)   studentYes      balance       income       rand_1       rand_2  
+#>  -4.359e+00    8.680e-01    2.047e-05    2.047e-05    5.140e-03   -1.032e-02  
+#> 
+#> Degrees of Freedom: 9999 Total (i.e. Null);  9994 Residual
+#> Null Deviance:	    2921 
+#> Residual Deviance: 2899 	AIC: 2911
 ```
 Looking at the output above shows that `balance` and `income` have now the
 same coefficient as required by the constraint. However, it seems important
@@ -140,11 +150,11 @@ fit
 #> 
 #> Coefficients:
 #> (Intercept)   studentYes      balance       income       rand_1       rand_2  
-#>  -4.357e+00    8.669e-01    2.039e-05    2.039e-05   -4.784e-02    3.914e-02  
+#>  -4.359e+00    8.680e-01    2.047e-05    2.047e-05    5.140e-03   -1.032e-02  
 #> 
 #> Degrees of Freedom: 9999 Total (i.e. Null);  9994 Residual
 #> Null Deviance:	    2921 
-#> Residual Deviance: 2898 	AIC: 2910
+#> Residual Deviance: 2899 	AIC: 2911
 ```
 
 Looking more closely at the constraints,
@@ -190,11 +200,11 @@ glm(default ~ ., family = binomial(), data = credit_default)
 #> 
 #> Coefficients:
 #> (Intercept)   studentYes      balance       income       rand_1       rand_2       random  
-#>   -10.88340     -0.63742      5.73652      3.23051     -0.06304      0.03268      0.06083  
+#>   -10.90997     -0.63785      5.75154      3.47015     -0.03480      0.06846     -0.05958  
 #> 
 #> Degrees of Freedom: 9999 Total (i.e. Null);  9993 Residual
 #> Null Deviance:	    2921 
-#> Residual Deviance: 1570 	AIC: 1584
+#> Residual Deviance: 1569 	AIC: 1583
 ```
 
 The constraint $\sqrt{\beta_{\text{balance}}^2 + \beta_{\text{income}}^2} \leq 1$ can be modeled by making use
@@ -223,17 +233,16 @@ and the model can be fit via the `hglm_fit()` function.
 
 ```r
 fit <- hglm_fit(model_2, solver = "ecos")
-#> Error in as.OP.hglm_model(x = model): dimension missmatch in as.OP
 coef(fit)
-#>   (Intercept)    studentYes       balance        income        rand_1        rand_2 
-#> -4.357400e+00  8.668843e-01  2.039058e-05  2.039058e-05 -4.784277e-02  3.913994e-02
+#>   (Intercept)    studentYes       balance        income        rand_1        rand_2        random 
+#> -4.3826816419  0.1880801113  0.9999997522  0.0007033037  0.0025744202  0.0007667845 -0.0136144567
 ```
 
 Calculating $\sqrt{\beta_{\text{balance}}^2 + \beta_{\text{income}}^2} \leq 1$ 
 
 ```r
 sqrt(sum(coef(fit)[c("balance", "income")]^2))
-#> [1] 2.883664e-05
+#> [1] 1
 ```
 verifies that the constraint is fulfilled.
 
@@ -507,7 +516,6 @@ Note constraints can be added during the fit using the `constraints` argument,
 ```r
 constraints <- c(k_max(3))
 (fit_a <- hglm_fit(model_a, constraints = constraints))
-#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
 #> 
 #> Call:  NULL
 #> 
@@ -519,7 +527,6 @@ constraints <- c(k_max(3))
 #> Null Deviance:	    1126 
 #> Residual Deviance: 190.7 	AIC: 157.9
 (fit_b <- hglm_fit(model_b, constraints = constraints))
-#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
 #> 
 #> Call:  NULL
 #> 
@@ -538,7 +545,6 @@ constraints <- c(k_max(3))
 model <- model_a
 constraints <- c(k_max(3), lower(c(cyl = 3)))
 hglm_fit(model_a, constraints = constraints)
-#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
 #> 
 #> Call:  NULL
 #> 
@@ -550,7 +556,6 @@ hglm_fit(model_a, constraints = constraints)
 #> Null Deviance:	    1126 
 #> Residual Deviance: 519 	AIC: 190
 hglm_fit(model_b, constraints = constraints)
-#> Warning: In hglm_fit: Binding linear constraints detected. The standard errors are corrected as described in the vignettes.
 #> 
 #> Call:  NULL
 #> 

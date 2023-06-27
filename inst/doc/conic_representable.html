@@ -2927,7 +2927,7 @@ pre code {
 Conic Representable
 </center></h1>
 <h4 class="date"><center>
-2023-04-24
+2023-06-27
 </center></h4>
 
 </div>
@@ -2947,8 +2947,8 @@ In all other cases, the problem is in principle not solvable, however exceptions
 Additional explanations to the decision tree are given in the subsection below.</p>
 <center>
 <div class="figure"><span style="display:block;" id="fig:conic"></span>
-<div id="htmlwidget-8564d1d42d2aede06d4f" style="width:576px;height:576px;" class="DiagrammeR html-widget"></div>
-<script type="application/json" data-for="htmlwidget-8564d1d42d2aede06d4f">{"x":{"diagram":"\n%%{init: { \"theme\": \"neutral\" } }%%\ngraph TB\n    A[\"Can my optimization problem be solved via conic optimization?\"] --> B{\"Convex?\"};\n    B -- yes --> C{\"Representable?\"};\n    B -- no --> D[\"Not solvable (Exceptions A).\"];\n    C -- yes --> E[\"Solvable via conic optimization.\"];\n    C -- no --> F[\"Not solvable (Exceptions B).\"];\n    click D \"#ExceptionsA\" \"For more information see Section `Exceptions A`\"\n    click F \"#ExceptionsB\" \"For more information see Section `Exceptions B`\"\n"},"evals":[],"jsHooks":[]}</script>
+<div id="htmlwidget-94aa0621033abd68359c" style="width:576px;height:576px;" class="DiagrammeR html-widget"></div>
+<script type="application/json" data-for="htmlwidget-94aa0621033abd68359c">{"x":{"diagram":"\n%%{init: { \"theme\": \"neutral\" } }%%\ngraph TB\n    A[\"Can my optimization problem be solved via conic optimization?\"] --> B{\"Convex?\"};\n    B -- yes --> C{\"Representable?\"};\n    B -- no --> D[\"Not solvable (Exceptions A).\"];\n    C -- yes --> E[\"Solvable via conic optimization.\"];\n    C -- no --> F[\"Not solvable (Exceptions B).\"];\n    click D \"#ExceptionsA\" \"For more information see Section `Exceptions A`\"\n    click F \"#ExceptionsB\" \"For more information see Section `Exceptions B`\"\n"},"evals":[],"jsHooks":[]}</script>
 <p class="caption">
 Figure 0.1: Simple decision tree to evaluate if a given optimization problem can be solved with a conic optimization solver.
 </p>

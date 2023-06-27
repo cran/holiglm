@@ -1,0 +1,97 @@
+---
+title: "Installing additional solvers"
+date: "`r Sys.Date()`"
+output: 
+  rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Installing additional solvers}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The **holiglm** package uses by default the **ECOS** solver.
+However, utilizing commercial solvers such as
+
+- [**MOSEK**](https://www.mosek.com),
+- [**GUROBI**](https://www.gurobi.com),
+- [**CPLEX**](https://www.ibm.com/products/ilog-cplex-optimization-studio/cplex-optimizer)
+
+can significantly reduce the computation time.
+Although these solvers are commercial, academic licenses are available free of charge for students and academic staff.
+It is important to note that the source code for these solvers is not accessible from **CRAN** and must be obtained from the respective company's homepage.
+
+Internally **holiglm** relies on the [**ROI**](https://cran.r-project.org/package=ROI) package, which provides a consistent interface across various solvers.
+To use the commercial solvers, the corresponding **R** interfaces need to be installed.
+
+## Installing MOSEK
+To use the **MOSEK** solver in **hglm**, you need to install the **Rmosek** and **ROI.plugin.mosek** packages.
+As **ROI.plugin.mosek** imports **Rmosek**, it is recommend to install **Rmosek** first.
+
+
+### Installing **Rmosek**
+Since **Rmosek** is commercial software, it must be obtained from [`https://www.mosek.com/`](https://www.mosek.com/).
+Information about installing **Rmosek** on *Windows*, *MacOS* and *Linux* can be found at [`https://docs.mosek.com/latest/rmosek/install-interface.html`](https://docs.mosek.com/latest/rmosek/install-interface.html).
+
+### Installing **ROI.plugin.mosek**
+To install **ROI.plugin.mosek**, you need to have the **Rmosek** package installed.
+Before installing **ROI.plugin.mosek**, make sure that **Rmosek** is correctly installed by loading it using the following command in **R**:
+```{r, eval = FALSE}
+library("Rmosek")
+```
+Once **Rmosek** is installed, you can install **ROI.plugin.mosek** directly from Gitlab using the following code:
+```{r, eval = FALSE}
+remotes::install_gitlab("roigrp/solver/ROI.plugin.mosek", INSTALL_opts = "--no-multiarch")
+```
+
+Since **ROI.plugin.mosek** only uses **R** code and does not link to any external library it is very unlikely that the installation will fail.
+If you encounter difficulties during the installation,
+
+1. Check if **Rmosek** was installed correctly, by executing `library("Rmosek")` in **R**.
+2. Check your internet connection.
+
+
+## Installing GUROBI
+As the **gurobi** package is commercial software, it must be obtained from [`https://www.gurobi.com`](https://www.gurobi.com/).
+The site [https://www.gurobi.com/documentation](https://www.gurobi.com/documentation/) provides installation instructions for **GUROBI** on *Windows*, *MacOS* and *Linux*.
+
+### Installing **ROI.plugin.gurobi**
+To install **ROI.plugin.gurobi**, you need to have the **gurobi** package installed.
+Before installing **ROI.plugin.gurobi**, ensure that **gurobi** is correctly installed by loading it in **R**:
+```{r, eval = FALSE}
+library("gurobi")
+```
+Once **gurobi** is installed, you can install **ROI.plugin.gurobi** directly from Gitlab using the following code:
+```{r, eval = FALSE}
+remotes:::install_gitlab("roigrp/solver/ROI.plugin.gurobi", INSTALL_opts = "--no-multiarch")
+```
+
+Since **ROI.plugin.gurobi** only uses **R** code and does not link to any external library it is very unlikely that the installation will fail.
+If you encounter difficulties during the installation,
+
+1. Check if **gurobi** was installed correctly, by executing `library("gurobi")` in **R**.
+2. Check your internet connection.
+
+
+## Installing CPLEX
+To use **ROI.plugin.cplex**:
+
+1. Install [IBM ILOG CPLEX Optimizer](https://www.ibm.com/products/ilog-cplex-optimization-studio/cplex-optimizer)
+2. Install [Rcplex](https://cran.r-project.org/package=Rcplex) from **CRAN**.
+3. Install **ROI.plugin.cplex**
+
+### Installing **ROI.plugin.cplex**
+To install **ROI.plugin.cplex**, you need to have the **Rcplex** package installed. 
+Before installing **ROI.plugin.cplex**, ensure that **Rcplex** is correctly installed by loading it in **R**:
+```{r, eval = FALSE}
+library("Rcplex")
+```
+Once **Rcplex** is installed, you can install **ROI.plugin.cplex** directly from Gitlab using the following code.
+```{r, eval = FALSE}
+remotes:::install_gitlab("roigrp/solver/ROI.plugin.cplex", INSTALL_opts = "--no-multiarch")
+```
+
+Since **ROI.plugin.cplex** only uses **R** code and does not link to any external library it is very unlikely that the installation will fail.
+If you encounter difficulties during the installation,
+
+1. Check if **Rcplex** was installed correctly, by executing `library("Rcplex")` in **R**.
+2. Check your internet connection.

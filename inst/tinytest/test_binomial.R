@@ -69,3 +69,12 @@ for (scaler in scaling) {
         eval(test)
     }
 }
+
+#' ### predict
+data <- PlantGrowth[as.integer(PlantGrowth$group) > 1L,]
+model <- hglm(group ~ ., data = data, family = binomial())
+gmodel <- glm(group ~ ., data = data, family = binomial())
+expect_equal(predict(model, type="link"), predict(gmodel, type="link"), tolerance=1e-4)
+expect_equal(predict(model, newdata=data[6:15,], type="link"), predict(gmodel, newdata=data[6:15,], type="link"), tolerance=1e-4)
+expect_equal(predict(model, type="response"), predict(gmodel, type="response"), tolerance=1e-4)
+expect_equal(predict(model, newdata=data[6:15,], type="response"), predict(gmodel, newdata=data[6:15,], type="response"), tolerance=1e-4)

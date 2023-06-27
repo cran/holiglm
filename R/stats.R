@@ -318,3 +318,43 @@ model_matrix <- function(object, data = environment(object),
     class(mm) <- c("model_matrix", class(mm))
     mm
 }
+
+
+#' Predict Method for HGLM Fits
+#'
+#' Obtains predictions from a fitted holistic generalized linear model object.
+#'
+#' @param object a fitted object of class inheriting from "hglm".
+#' @param newdata an optional data frame containing new observations for which
+#'  predictions are to be made. If ommitted, the fitted linear predictors are
+#'  used.
+#' @param type the type of predictions to be made. Possible values are
+#'  \code{"link"} (default) or \code{"response"}. If \code{"link"}, the
+#'  predictions are in the link scale; if \code{"response"}, the predictions
+#'  are transformed to the response scale.
+#' @param ... optional arguments currently ignored.
+#' @return A vector of predicted values. If \code{type = "link"}, the predicted
+#'  values are in the link scale; if \code{type = "response"}, the predicted
+#'  values are in the response scale.
+#' @rdname predict.hglm
+#' @examples
+#' dat <- rhglm(100, c(1, 2, -3, 4, 5, -6))
+#' fit <- hglm(y ~ ., constraints = k_max(3), data = dat)
+#' pred <- predict(fit)
+#' pred2 <- predict(fit, newdata=dat)
+#' @export
+predict.hglm <- function(object, newdata = NULL, type = c("link", "response"), ...) {
+    type <- match.arg(type)
+
+    if (is.null(newdata)) {
+        mm <- model_matrix(object)
+    } else {
+        Terms <- delete.response(terms(object))
+        m <- model.frame(Terms, newdata, xlev = object$xlevels)
+        mm <- model.matrix(Terms, m, contrasts.arg = object$contrasts)
+    }
+
+    pred <- drop(mm %*% coef(object))
+    if (type == "link") pred else family(object)$linkinv(pred)
+}
+

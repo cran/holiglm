@@ -119,6 +119,14 @@ fit <- hglm(counts~., family=poisson(), dobson, constraints=NULL, scaler="off")
 coef1 <- c(3.04452, -0.45426, -0.29299, 0, 0)
 expect_equal(unname(coef(fit)), coef1, tolerance=1e-4)
 
+# predict
+model <- hglm(counts~., family=poisson(), data=dobson, constraints=NULL, scaler="off")
+gmodel <- glm(counts~., family=poisson(), data=dobson)
+expect_equal(predict(model, type="link"), predict(gmodel, type="link"), tolerance=1e-4)
+expect_equal(predict(model, newdata=dobson, type="link"), predict(gmodel, newdata=dobson, type="link"), tolerance=1e-4)
+expect_equal(predict(model, type="response"), predict(gmodel, type="response"), tolerance=1e-4)
+expect_equal(predict(model, newdata=dobson, type="response"), predict(gmodel, newdata=dobson, type="response"), tolerance=1e-4)
+
 # scale predictors
 fit_center_standardization <- hglm(counts~., family=poisson(), dobson, constraints=NULL, scaler="center_standardization")
 fit_center_minmax <- hglm(counts~., family=poisson(), dobson, constraints=NULL, scaler="center_minmax")
