@@ -1,0 +1,18 @@
+bibentry(bibtype = "Article",
+  title        = "Holistic Generalized Linear Models",
+  author       = c(person(given = "Benjamin",
+                          family = "Schwendinger",
+                          email = "benjaminschwe@gmail.com"),
+                   person(given = "Florian",
+                          family = "Schwendinger"),
+                   person(given = "Laura",
+                          family = "Vana")),
+  journal      = "Journal of Statistical Software",
+  year         = "2024",
+  volume       = "108",
+  number       = "7",
+  pages        = "1--49",
+  doi          = "10.18637/jss.v108.i07",
+  header       = "To cite holiglm in publications use:"
+)
+

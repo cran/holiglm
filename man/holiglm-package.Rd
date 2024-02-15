@@ -25,9 +25,9 @@ be familiar with conic optimization but is only required to have basic \R knowle
 }
 \references{
 \strong{Holistic regression} \cr
-Schwendinger, B., Schwendinger, F., & Vana, L. (2022).
+Schwendinger, B., Schwendinger, F., & Vana, L. (2024).
 Holistic Generalized Linear Models.
-\doi{10.48550/ARXIV.2205.15447}.
+\doi{10.18637/jss.v108.i07}.
 
 Bertsimas, D., & King, A. (2016).
 OR Forum-An Algorithmic Approach to Linear Regression

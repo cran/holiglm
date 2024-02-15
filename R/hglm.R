@@ -223,7 +223,7 @@ choose_solver <- function(solver, family, is_mip = NULL, is_conic = FALSE) {
 #'
 #' @details In the case of binding linear constraints the standard errors are corrected,
 #'          more information about the correction can be found in
-#'          \href{https://arxiv.org/abs/2205.15447}{Schwendinger, Schwendinger and Vana (2022)}.
+#'          Schwendinger, Schwendinger and Vana (2024) \doi{10.18637/jss.v108.i07}.
 #'
 #' @param formula an object of class \code{"formula"} giving the symbolic description
 #'   of the model to be fitted.
@@ -259,9 +259,9 @@ choose_solver <- function(solver, family, is_mip = NULL, is_conic = FALSE) {
 #' hglm(y ~ . - 1, data = dat)
 #'
 #' @references
-#' Schwendinger B., Schwendinger F., Vana L. (2022).
+#' Schwendinger B., Schwendinger F., Vana L. (2024).
 #' Holistic Generalized Linear Models
-#' \doi{10.48550/arXiv.2205.15447}
+#' \doi{10.18637/jss.v108.i07}
 #'
 #' Bertsimas, D., & King, A. (2016).
 #' OR Forum-An Algorithmic Approach to Linear Regression
@@ -573,7 +573,7 @@ hglm_fit <- function(model, constraints = NULL, big_m, solver = "auto", control 
     }
     fit <- new_hglm_fit(model, roi_solution = solu, object_size = object_size, boundary = any(bicon))
     fit$timing <- c(op_build_time = op_build_time, solve_time = op_solve_time)
-    if (any(abs(fit[["coefficients_scaled"]]) >= (big_m - 1e-4))) {
+    if (any(abs(fit[["coefficients_scaled"]]) >= (big_m - 1e-4)) && is_mip) {
         warning("In hglm_fit: At least one of the Big-M constraints is binding! ",
                 "Increase the 'big_m' value and repeat the estimation.")
         fit[["coefficients"]] <- rep.int(NA_real_, length(fit[["coefficients"]]))

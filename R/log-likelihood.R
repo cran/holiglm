@@ -217,7 +217,8 @@ loglike_poisson_sqrt <- function(x, y, weights = rep.int(1L, NROW(x)), ...) {
 # @return An object of class \code{"OP"}.
 # @export
 loglike_gaussian_identity <- function(x, y, weights = rep.int(1L, NROW(x)), solver = "auto", ...) {
-    if (solver=="ecos" || solver=="auto" && "ecos" %in% names(ROI::ROI_registered_solvers())) {
+    SOCP_solvers = c("ecos", "clarabel", "scs")
+    if (solver %in% SOCP_solvers || solver=="auto" && "ecos" %in% names(ROI::ROI_registered_solvers())) {
         # FIXME: Use a better algorithm to select the solver.
         return(loglike_gaussian_identity_SOCP(x, y, weights = weights, ...))
     }

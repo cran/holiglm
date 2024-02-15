@@ -103,7 +103,7 @@ Fit a generalized linear model under holistic constraints.
 \details{
 In the case of binding linear constraints the standard errors are corrected,
          more information about the correction can be found in
-         \href{https://arxiv.org/abs/2205.15447}{Schwendinger, Schwendinger and Vana (2022)}.
+         Schwendinger, Schwendinger and Vana (2024) \doi{10.18637/jss.v108.i07}.
 }
 \examples{
 dat <- rhglm(100, c(1, 2, -3, 4, 5, -6))
@@ -117,9 +117,9 @@ hglm(y ~ . - 1, data = dat)
 
 }
 \references{
-Schwendinger B., Schwendinger F., Vana L. (2022).
+Schwendinger B., Schwendinger F., Vana L. (2024).
 Holistic Generalized Linear Models
-\doi{10.48550/arXiv.2205.15447}
+\doi{10.18637/jss.v108.i07}
 
 Bertsimas, D., & King, A. (2016).
 OR Forum-An Algorithmic Approach to Linear Regression
