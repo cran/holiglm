@@ -179,17 +179,15 @@ get_center_response <- function(model) {
 }
 
 
-is_probit <- function(family) {
-    isTRUE(family$family == "binomial") && isTRUE(family$link == "probit")
+is_probit <- function(family, approx = FALSE) {
+    isTRUE(family$family == "binomial") && isTRUE(family$link == "probit") && !approx
 }
 
 
-approx_inverse <- function(x, family) {
-    if (family$family == "binomial") {
-        if (family$link == "probit") {
-            # K.D. Tocher. 1963. The art of simulation. English Universities Press, London.
-            return(x / (2 * sqrt(2 / pi)))
-        }
+approx_inverse <- function(x, family, approx = FALSE) {
+    if (is_probit(family, approx)) {
+        # K.D. Tocher. 1963. The art of simulation. English Universities Press, London.
+        return(x / (2 * sqrt(2 / pi)))
     }
     x
 }
@@ -244,9 +242,11 @@ choose_solver <- function(solver, family, is_mip = NULL, is_conic = FALSE) {
 #' @param solver a character string giving the name of the solver to be used for the estimation.
 #' @param control a list of control parameters passed to \code{ROI_solve}.
 #' @param dry_run a logical; if \code{TRUE} the model is not fit but only constructed.
+#' @param approx a logical; if \code{TRUE} uses linear approximation of log-likelihood.
 #' @param object_size a character string giving the object size, allowed values
 #'  are \code{"normal"} and \code{"big"}. If \code{"big"} is choosen, also
 #'  the \pkg{ROI} solution and the \code{"hglm_model"} object are returned.
+#' @param ... For ‘approx’: further arguments passed to or from other methods.
 #' @return An object of class \code{"hglm"} inheriting from \code{"glm"}.
 #' @examples
 #' dat <- rhglm(100, c(1, 2, -3, 4, 5, -6))
@@ -288,8 +288,9 @@ hglm <- function(formula, family = gaussian(), data, constraints = NULL,
                  weights = NULL, scaler = c("auto", "center_standardization",
                  "center_minmax", "standardization", "minmax", "off"),
                  scale_response = NULL, big_m = 100, solver = "auto", control = list(),
-                 dry_run = FALSE, object_size = c("normal", "big")) {
+                 dry_run = FALSE, approx = FALSE, object_size = c("normal", "big"), ...) {
     tstart <- Sys.time()
+    dots <- list(...)
     object_size <- match.arg(object_size)
     constraints <- as.lohglmc(constraints)
     if (length(constraints) == 0L) constraints <- NULL
@@ -317,18 +318,22 @@ hglm <- function(formula, family = gaussian(), data, constraints = NULL,
     if ((attr(md[["mt"]], "intercept") == 0L) && scaler == "auto") {
         scaler <- "off"
     }
-    if (is_probit(family)) {
+    if (is_probit(family, approx)) {
         md$X <- md$X * (2 * sqrt(2 / pi))  # K.D. Tocher. 1963. The art of simulation. English Universities Press, London.
     }
 
+    if ("tangent_points" %in% names(dots)) {
+        attr(md$X, "tangent_points") <- dots$tangent_points
+    }
     md <- scale_model_data(md, scaler, scale_response = scale_response, family = family$family)
     tstart_model <- Sys.time()
     model <- hglm_model(x = md$X, y = md$Y, family = family, weights = md$weights,
-                        frame = md$mf, solver = solver)
+                        frame = md$mf, solver = solver, approx = approx)
     model_build_time <- Sys.time() - tstart_model  # contains building the likelihood
     model[["scaler"]] <- scaler
     fit <- hglm_fit(model, constraints = constraints, big_m = big_m, solver = solver,
-                    control = control, dry_run = dry_run, object_size = object_size)
+                    control = control, dry_run = dry_run, approx = approx, object_size = object_size)
+    attr(fit, "object_size") <- object_size
     if (isTRUE(dry_run)) return(fit)
     total_time <- Sys.time() - tstart
     fit$timing <- c(fit$timing, model_build_time = model_build_time, total_time = total_time)
@@ -528,7 +533,8 @@ add_constraints <- function(model, constraints, bigM) {
 #'  \code{include()} and \code{group_equal()} use the big-M set here.
 #' @param solver a character string giving the name of the solver to be used for the estimation.
 #' @param control a list of control parameters passed to \code{ROI_solve}.
-#' @param dry_run a logical if \code{TRUE} the model is not fit but only constructed.
+#' @param dry_run a logical; if \code{TRUE} the model is not fit but only constructed.
+#' @param approx a logical; if \code{TRUE} uses linear approximation of log-likelihood.
 #' @param object_size a character string giving the object size, allowed values
 #'  are \code{"normal"} and \code{"big"}. If \code{"big"} is choosen, also
 #'  the \pkg{ROI} solution and the \code{"hglm_model"} object are returned.
@@ -541,7 +547,7 @@ add_constraints <- function(model, constraints, bigM) {
 #' @name hglm_fit
 #' @export
 hglm_fit <- function(model, constraints = NULL, big_m, solver = "auto", control = list(),
-                     dry_run = FALSE, object_size = c("normal", "big")) {
+                     dry_run = FALSE, approx = FALSE, object_size = c("normal", "big")) {
     object_size <- match.arg(object_size)
     constraints <- as.lohglmc(constraints)
     if (missing(big_m)) {
@@ -571,7 +577,7 @@ hglm_fit <- function(model, constraints = NULL, big_m, solver = "auto", control 
               "The standard errors are corrected as described in the vignettes.",
               call. = FALSE)
     }
-    fit <- new_hglm_fit(model, roi_solution = solu, object_size = object_size, boundary = any(bicon))
+    fit <- new_hglm_fit(model, roi_solution = solu, object_size = object_size, boundary = any(bicon), approx = approx)
     fit$timing <- c(op_build_time = op_build_time, solve_time = op_solve_time)
     if (any(abs(fit[["coefficients_scaled"]]) >= (big_m - 1e-4)) && is_mip) {
         warning("In hglm_fit: At least one of the Big-M constraints is binding! ",
@@ -590,7 +596,7 @@ hglm_fit <- function(model, constraints = NULL, big_m, solver = "auto", control 
 # create a new hglm fit object
 # currently we use the refit version
 # roi_solution <- solu
-new_hglm_fit <- function(model, roi_solution, object_size, boundary = FALSE) {
+new_hglm_fit <- function(model, roi_solution, object_size, boundary = FALSE, approx = FALSE) {
     intercept <- has_intercept(model)
     x_scaled <- model$x; x <- unscale_model_data(x_scaled)
     y_scaled <- model$y; y <- unscale_response(y_scaled)
@@ -617,7 +623,7 @@ new_hglm_fit <- function(model, roi_solution, object_size, boundary = FALSE) {
     coeffi <- setNames(coeffi_scaled / get_scale(model), colnames(x))
 
     if (intercept) {
-        if (is_probit(family)) {
+        if (is_probit(family, approx)) {
             correction <- sum(coeffi_scaled[-1] / get_scale(model)[-1] * get_center(model)[-1]) / (2 * sqrt(2 / pi))
         } else {
             correction <- sum(coeffi_scaled[-1] / get_scale(model)[-1] * get_center(model)[-1])
@@ -637,9 +643,6 @@ new_hglm_fit <- function(model, roi_solution, object_size, boundary = FALSE) {
         }
     }
 
-    #DELME: coeffi_scaled <- approx_inverse(coeffi_scaled, family)
-    #DELME: coeffi <- approx_inverse(coeffi, family)
-
     linkinv <- family$linkinv
     nobs <- NROW(y)
     nvars <- ncol(x)
@@ -653,7 +656,10 @@ new_hglm_fit <- function(model, roi_solution, object_size, boundary = FALSE) {
     dev <- sum(family$dev.resids(y, mu, weights))
 
     z <- (eta - offset)[good] + (y - mu)[good] / mu.eta.val[good]
-    w <- sqrt((weights[good] * mu.eta.val[good]^2) / family$variance(mu)[good])
+    fam_var <- family$variance(mu)
+    # correct zero variance to avoid divison through 0 in w
+    fam_var[abs(fam_var) < 1e-08] <- 1e-08
+    w <- sqrt((weights[good] * mu.eta.val[good]^2) / fam_var[good])
     wt <- setNames(rep.int(0, nobs), ynames)
     wt[good] <- w^2
     wtdmu <- if (intercept) sum(weights * y) / sum(weights) else linkinv(offset)
@@ -682,6 +688,9 @@ new_hglm_fit <- function(model, roi_solution, object_size, boundary = FALSE) {
     rank <- sum(coef_indicators)
 
     aic.model <- family$aic(y, model$n, mu, weights, dev) + 2 * rank
+    if(is.nan(aic.model) || is.na(aic.model)) {
+        aic.model <- dev + 2*rank
+    }
 
     resdf <- n.ok - rank
 
@@ -732,6 +741,7 @@ new_hglm_fit <- function(model, roi_solution, object_size, boundary = FALSE) {
 #' @param family a description of the error distribution and link function to be used in the model.
 #' @param weights an optional vector of 'prior weights' to be used for the estimation.
 #' @param frame an optional model frame object.
+#' @param approx a logical; if \code{TRUE} uses linear approximation of log-likelihood.
 #' @param solver a character string giving the name of the solver to be used for the estimation.
 #' @examples
 #' dat <- rhglm(100, c(1, 2, -3, 4, 5, -6))
@@ -740,10 +750,11 @@ new_hglm_fit <- function(model, roi_solution, object_size, boundary = FALSE) {
 #' @return An object of class \code{"hglm_model"}.
 #' @name hglm_model
 #' @export
-hglm_model <- function(x, y, family = gaussian(), weights = NULL, frame = NULL, solver = "auto") {
+hglm_model <- function(x, y, family = gaussian(), weights = NULL, frame = NULL, solver = "auto", approx = FALSE) {
     assert(check_class(family, "family"))
     assert_true(NROW(x) == NROW(y))
     assert_true(NROW(x) > 0)
+    approx_name <- if (approx) "_approx" else ""
     # glm.fit like - init - START
     x <- as.matrix(x)
     if (!all(is.finite(x))) {
@@ -765,7 +776,7 @@ hglm_model <- function(x, y, family = gaussian(), weights = NULL, frame = NULL, 
     eval(family$initialize)
     # glm.fit like - init - END
     assert_numeric(y)
-    construct_optimization_problem <- loglike_function(family)
+    construct_optimization_problem <- loglike_function(family, approx_name)
     if (is.null(construct_optimization_problem)) {
         msg <- sprintf("hglm model of family '%s' with link '%s' is not implemented!",
                        family$family, family$link)

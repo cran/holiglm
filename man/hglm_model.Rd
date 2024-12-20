@@ -10,7 +10,8 @@ hglm_model(
   family = gaussian(),
   weights = NULL,
   frame = NULL,
-  solver = "auto"
+  solver = "auto",
+  approx = FALSE
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ hglm_model(
 \item{frame}{an optional model frame object.}
 
 \item{solver}{a character string giving the name of the solver to be used for the estimation.}
+
+\item{approx}{a logical; if \code{TRUE} uses linear approximation of log-likelihood.}
 }
 \value{
 An object of class \code{"hglm_model"}.

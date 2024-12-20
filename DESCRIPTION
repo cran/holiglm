@@ -1,7 +1,7 @@
 Package: holiglm
 Type: Package
 Title: Holistic Generalized Linear Models
-Version: 1.0.0
+Version: 1.0.1
 Authors@R: c(
     person("Benjamin", "Schwendinger", role = c("aut", "cre"), email = "benjaminschwe@gmail.com"),
     person("Florian", "Schwendinger", role = "aut"),
@@ -11,16 +11,16 @@ Description: Holistic generalized linear models (HGLMs) extend generalized linea
 Depends: R (>= 3.5.0), ROI.plugin.ecos
 Imports: slam, checkmate, MASS, SuppDists, ROI (>= 0.3-0)
 Encoding: UTF-8
-Suggests: ROI.plugin.scs, tinytest (>= 1.0.0), parallel, knitr,
-        rmarkdown, bookdown, DiagrammeR
+Suggests: ROI.plugin.scs, ROI.plugin.clarabel, tinytest (>= 1.0.0),
+        parallel, knitr, rmarkdown, bookdown, DiagrammeR
 License: GPL-3
 VignetteBuilder: knitr
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.1
 NeedsCompilation: no
-Packaged: 2024-02-15 14:58:12 UTC; bschwendinger
+Packaged: 2024-12-20 08:54:13 UTC; ben
 Author: Benjamin Schwendinger [aut, cre],
   Florian Schwendinger [aut],
   Laura Vana [aut]
 Maintainer: Benjamin Schwendinger <benjaminschwe@gmail.com>
 Repository: CRAN
-Date/Publication: 2024-02-15 15:50:02 UTC
+Date/Publication: 2024-12-20 09:20:02 UTC

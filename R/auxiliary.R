@@ -27,16 +27,16 @@ factor_binary <- function(x) {
 }
 
 
-loglike_function <- function(family) {
+loglike_function <- function(family, approx = "") {
     # envir <- parent.frame(1)
     envir <- parent.env(environment())
     tryCatch({
         if (is_power(family)) {
             mu <- extract_power(family)
             qassert(mu, "R1(0,1)")
-            get(sprintf("loglike_%s_power", family$family), envir = envir)
+            get(sprintf("loglike_%s_power%s", family$family, approx), envir = envir)
         } else {
-            get(sprintf("loglike_%s_%s", family$family, family$link), envir = envir)
+            get(sprintf("loglike_%s_%s%s", family$family, family$link, approx), envir = envir)
         }
     }, error = function(e) NULL)
 }

@@ -11,6 +11,7 @@ hglm_fit(
   solver = "auto",
   control = list(),
   dry_run = FALSE,
+  approx = FALSE,
   object_size = c("normal", "big")
 )
 }
@@ -28,7 +29,9 @@ Required to inherit from \code{"hglmc"}. Currently constraints created by
 
 \item{control}{a list of control parameters passed to \code{ROI_solve}.}
 
-\item{dry_run}{a logical if \code{TRUE} the model is not fit but only constructed.}
+\item{dry_run}{a logical; if \code{TRUE} the model is not fit but only constructed.}
+
+\item{approx}{a logical; if \code{TRUE} uses linear approximation of log-likelihood.}
 
 \item{object_size}{a character string giving the object size, allowed values
 are \code{"normal"} and \code{"big"}. If \code{"big"} is choosen, also

@@ -19,7 +19,9 @@ hglm(
   solver = "auto",
   control = list(),
   dry_run = FALSE,
-  object_size = c("normal", "big")
+  approx = FALSE,
+  object_size = c("normal", "big"),
+  ...
 )
 
 holiglm(
@@ -35,7 +37,9 @@ holiglm(
   solver = "auto",
   control = list(),
   dry_run = FALSE,
-  object_size = c("normal", "big")
+  approx = FALSE,
+  object_size = c("normal", "big"),
+  ...
 )
 
 hglm_seq(
@@ -85,9 +89,13 @@ Required to inherit from \code{"hglmc"}. Currently constraints created by
 
 \item{dry_run}{a logical; if \code{TRUE} the model is not fit but only constructed.}
 
+\item{approx}{a logical; if \code{TRUE} uses linear approximation of log-likelihood.}
+
 \item{object_size}{a character string giving the object size, allowed values
 are \code{"normal"} and \code{"big"}. If \code{"big"} is choosen, also
 the \pkg{ROI} solution and the \code{"hglm_model"} object are returned.}
+
+\item{...}{For ‘approx’: further arguments passed to or from other methods.}
 
 \item{k_seq}{an integer vector giving the values of \code{k_max} for which the model
 should be estimated.}

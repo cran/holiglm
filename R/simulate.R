@@ -101,7 +101,7 @@ bound_mu <- function(mu, family_name, eps = .Machine[["double.eps"]]) {
     if (family_name == "binomial") {
         mu[mu >= 1] <- 1 - eps
     } else if (family_name %in% c("Gamma", "poisson", "inverse.gaussian", "negative.binomial")) {
-        mu[mu <= 0] <- 0
+        mu[mu <= 0] <- .Machine[["double.eps"]]
     }
     mu
 }
@@ -133,7 +133,7 @@ sim_gamma_response <- function(n, mu, scale = 1, ...) {
 }
 
 sim_poisson_response <- function(n, mu, ...) {
-    assert_numeric(mu, any.missing = FALSE, lower = .Machine[["double.eps"]])
+    assert_numeric(mu, any.missing = FALSE, lower = 0)
     rpois(n = n, lambda = mu)
 }
 

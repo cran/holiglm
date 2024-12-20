@@ -3,7 +3,6 @@
 \docType{package}
 \name{holiglm-package}
 \alias{holiglm-package}
-\alias{_PACKAGE}
 \title{Holistic Generalized Linear Models Package}
 \description{
 The holistic generalized linear models package simplifies

@@ -56,6 +56,40 @@ loglike_binomial_log <- function(x, y, weights = rep.int(1L, NROW(x)), eps = 1e-
     op
 }
 
+loglike_binomial_log_approx <- function(x, y, weights = rep.int(1L, NROW(x)), eps = 1e-7, ...) {
+    if ("tangent_points" %in% names(attributes(x))) {
+        Vx <- attributes(x)$tangent_points
+    } else {
+        Vx <- c(-16.53, -11.88, -8, -7.01, -4.68, -4.23, -3.12, -2.34, -1.92, -1.58, -1.28, -1.03, -0.82, -0.64, -0.49, -0.25, -0.1)
+    }
+    wy <- y * weights
+    assert_integerish(wy, any.missing = FALSE)
+    if (is_zero_one(y)) {
+        yx <- y %*% x
+        y_is_0 <- y == 0L
+        weights <- rep.int(1, sum(y_is_0))
+    } else {
+        yx <- round(wy) %*% x
+        y0_count <- round((1 - y) * weights)
+        y_is_0 <- y0_count > 0L
+        weights <- y0_count[y_is_0]
+    }
+    n_y_is_0 <- sum(y_is_0)
+    n <- nrow(x); m <- ncol(x)
+
+    f <- function(v) -log(1-exp(v))
+    fd <- function(v) 1/(exp(-v)-1)
+    tangent <- function(vk) L_constraint(cbind(-fd(vk)*drop(x)[y_is_0,], stdm(1, n_y_is_0)), geq(n_y_is_0), rep(f(vk)-fd(vk)*vk, n_y_is_0))
+
+    # - x * \beta + -log(1-exp(x * \beta))
+    op <- OP(c(-(yx), weights), maximum = FALSE)
+    C1 = L_constraint(cbind(drop(x), stzm(n, n_y_is_0)), leq(n), double(n))
+    C2 = do.call(rbind, lapply(Vx, tangent))
+    constraints(op) <- rbind(C1, C2)
+    bounds(op) <- V_bound(li=seq(m), lb=rep.int(-Inf, m), nobj = length(objective(op)))
+    op
+}
+
 
 # @title Binomial Logit Log-Likelihood
 # @param x design matrix of dimension \eqn{n \times p}.
@@ -90,6 +124,43 @@ loglike_binomial_logit <- function(x, y, weights = rep.int(1L, NROW(x)), ...) {
     op
 }
 
+loglike_binomial_logit_approx <- function(x, y, weights = rep.int(1L, NROW(x)), ...) {
+    if ("tangent_points" %in% names(attributes(x))) {
+        Vx <- attributes(x)$tangent_points
+    } else {
+        Vx <- c(-8.02, -5.88, -4.74, -3.37, -1.75, -0.65, -0.33, -0.04, 0.37, 1.07, 1.69, 2.74, 4.01, 7.08, 8.82)
+        #Vx <- c(-6.37, -4.78, -3.79, -3.03, -2.14, -1.47, -0.87, -0.32, 0.2, 0.6, 1.03, 2.02, 3.26, 4.01, 5.4)
+    }
+    y[y == 0] <- -1
+    if (is.null(weights)) {
+      yx <- y * x
+      weights <- rep.int(1L, NROW(x))
+    } else {
+      yx <- (weights * y) * x
+    }
+    n <- nrow(x); m <- ncol(x)
+    f <- function(v) log(1+exp(v))
+    fd <- function(v) 1/(exp(-v)+1)
+    tangent <- function(vk) L_constraint(cbind(-fd(vk)*drop(-yx), stdm(1, n)), geq(n), rep(f(vk)-fd(vk)*vk, n))
+    # build_tangent <- function(Vx) {
+    #     mat = as.simple_triplet_matrix(-yx)
+    #     mat1 = do.call(rbind, lapply(Vx, function(vk) -fd(vk)*(-yx)))
+    #     mat2 = stm(seq(n*length(Vx)), rep(seq(n), length(Vx)), rep(1L, length(Vx)*n))
+    #     L_constraint(cbind(mat1, mat2), geq(n*length(Vx)), rep(sapply(Vx, function(vk) f(vk)-fd(vk)*vk), each=n))
+    # }
+    # tangent_cons <- build_tangent(Vx)
+    op <- OP(c(beta=double(m), weights), maximum = FALSE)
+    tangent_cons <- do.call(rbind, lapply(Vx, tangent))
+    # f'(v1)(v-v1)+f(v1)=-v
+    v1_cons <- L_constraint(cbind(drop(yx), stdm(1,n)), geq(n), numeric(n))
+    # f'(v4)(v-v4)+f(v4)=0
+    v4_cons <- L_constraint(cbind(stzm(n, m), stdm(1,n)), geq(n), numeric(n))    
+    constraints(op) <- rbind(tangent_cons, v1_cons, v4_cons)
+    bounds(op) <- V_bound(li=seq(m), lb=rep.int(-Inf, m), nobj = length(objective(op)))
+    op
+}
+
+
 
 # @title Binomial Logit Log-Likelihood
 # @param x design matrix of dimension \eqn{n \times p}.
@@ -104,6 +175,32 @@ loglike_binomial_logit <- function(x, y, weights = rep.int(1L, NROW(x)), ...) {
 # @export
 # NOTE: We use the Kocher approximation 
 loglike_binomial_probit <- loglike_binomial_logit
+
+
+loglike_binomial_probit_approx <- function(x, y, weights = rep.int(1L, NROW(x)), ...) {
+    if ("tangent_points" %in% names(attributes(x))) {
+        Vx <- attributes(x)$tangent_points
+    } else {
+        Vx <- c(-7.79, -6.94, -6.01, -5.04, -4.55, -4.04, -3.3, -2.55, -1.94, -1.32, -0.79, -0.24, 0.27, 0.84, 1.62, 7.11, 8.13)
+    }
+
+    y[y == 0] <- -1
+    if (is.null(weights)) {
+        yx <- y * x
+        weights <- rep.int(1L, NROW(x))
+    } else {
+        yx <- (weights * y) * x
+    }
+    n <- nrow(x); m <- ncol(x)
+    f <- function(v) -log(pnorm(v))
+    fd <- function(v) -dnorm(v)/pnorm(v)
+    tangent <- function(vk) L_constraint(cbind(-fd(vk)*drop(yx), stdm(1, n)), geq(n), rep(f(vk)-fd(vk)*vk, n))
+
+    op <- OP(c(double(m), rep(1, n)), maximum = FALSE)
+    constraints(op) = do.call(rbind, lapply(Vx, tangent))
+    bounds(op) <- V_bound(li=seq(m), lb=rep.int(-Inf, m), nobj = length(objective(op)))
+    op
+}
 
 
 #
@@ -127,6 +224,7 @@ loglike_poisson_log <- function(x, y, weights = rep.int(1L, NROW(x)), ...) {
     }
     m <- nrow(x); n <- ncol(x)
     i <- 3 * seq_len(m) - 2
+    # minimize -y(x*\beta) + exp(x*\beta)
     op <- OP(c(-yx, weights))
     A <- cbind(stm(rep(i, n), rep(seq_len(n), each = m), -drop(x), 3 * m, n),
                stm(i + 2, seq_len(m), rep.int(-1, m), 3 * m, m))
@@ -136,6 +234,50 @@ loglike_poisson_log <- function(x, y, weights = rep.int(1L, NROW(x)), ...) {
     bounds(op) <- V_bound(ld = -Inf, nobj = ncol(A))
     op
 }
+
+loglike_poisson_log_approx <- function(x, y, weights = rep.int(1L, NROW(x)), ...) {
+    if ("tangent_points" %in% names(attributes(x))) {
+        Vx <- attributes(x)$tangent_points
+    } else {
+        Vx <- c(1.04, 1.99, 3.34, 4.25, 5.26, 5.64, 5.98, 6.28, 7.24, 7.66, 8.03, 8.48, 8.91, 9.1, 9.29, 9.54, 9.78)
+    }
+    
+    if (is.null(weights)) {
+        yx <- y %*% x
+        weights <- rep.int(1L, NROW(x))
+    } else {
+        yx <- (weights * y) %*% x
+    }
+    n <- nrow(x); m <- ncol(x)
+    op <- OP(c(-yx, weights), maximum=FALSE)
+    f <- fd <- exp
+    tangent <- function(vk) L_constraint(cbind(-fd(vk)*drop(x), stdm(1, n)), geq(n), rep(f(vk)-fd(vk)*vk, n))
+
+    constraints(op) <- do.call(rbind, lapply(Vx, tangent))
+    bounds(op) <- V_bound(li=seq(m), lb=rep.int(-Inf, m), nobj = length(objective(op)))
+    op
+}
+
+
+# loglike_poisson_log_approx <- function(x, y, weights = rep.int(1L, NROW(x)), ...) {
+#     if (is.null(weights)) {
+#         yx <- y %*% x
+#         weights <- rep.int(1L, NROW(x))
+#     } else {
+#         yx <- (weights * y) %*% x
+#     }
+#     n <- nrow(x); m <- ncol(x)
+#     op <- OP(c(-yx, weights), maximum=FALSE)
+#     f <- function(v) exp(v)
+#     fd <- function(v) exp(v)
+#     tangent <- function(vk) L_constraint(cbind(-fd(vk)*drop(x), stdm(1, n)), geq(n), rep(f(vk)-fd(vk)*vk, n))
+#     Vx = seq(0, 10, length.out=50)
+#     #Vx = c(0, 1, 2, 3, 4, 5)
+#     constraints(op) <- do.call(rbind, lapply(Vx, tangent))
+#     bounds(op) <- V_bound(li=seq(m), lb=rep.int(-Inf, m), nobj = length(objective(op)))
+#     op
+# }
+
 
 
 # @title Poisson Identity Log-Likelihood
@@ -162,12 +304,37 @@ loglike_poisson_identity <- function(x, y, weights = rep.int(1L, NROW(x)), ...) 
                stm(i, seq_len(m), rep.int(-1, m), 3 * m, m))
     rhs <- rep(c(0, 1, 0), m)
     cones <- K_expp(m)
+
     nonneg_const <- C_constraint(cbind(-wx, stzm(m)), K_lin(m), rep(0, m))
     constraints(op) <- c(C_constraint(A, cones, rhs), nonneg_const)
     bounds(op) <- V_bound(ld = -Inf, nobj = ncol(A))
     op
 }
 
+
+loglike_poisson_identity_approx <- function(x, y, weights = rep.int(1L, NROW(x)), ...) {
+    if ("tangent_points" %in% names(attributes(x))) {
+        Vx <- attributes(x)$tangent_points
+    } else {
+        Vx <- c(1e3, 2.95, 3.7, 4.32, 5.17, 5.51, 5.82, 6.07, 6.3, 6.72, 7.07, 7.4, 7.65, 7.89, 8.31, 8.67, 9)
+    }
+    if (is.null(weights)) {
+        wx <- x
+        wy <- y
+    } else {
+        wx <- diag(weights) %*% x
+        wy <- weights * y
+    }
+    n <- nrow(x); m <- ncol(x)
+    #  x * \beta + y * -\log(x * \beta)
+    op <- OP(c(colSums(wx), wy))
+    f <- function(x) -log(x)
+    fd <- function(x) -1/x
+    tangent <- function(vk) L_constraint(cbind(-fd(vk)*drop(x), stdm(1, n)), geq(n), rep(f(vk)-fd(vk)*vk, n))
+    constraints(op) <- do.call(rbind, lapply(Vx, tangent))
+    bounds(op) <- V_bound(li=seq(m), lb=rep.int(-Inf, m), nobj = length(objective(op)))
+    op
+}
 
 # @title Poisson Sqrt Log-Likelihood
 # @param x design matrix of dimension \eqn{n \times p}.
@@ -202,6 +369,37 @@ loglike_poisson_sqrt <- function(x, y, weights = rep.int(1L, NROW(x)), ...) {
     op
 }
 
+
+loglike_poisson_sqrt_approx <- function(x, y, weights = rep.int(1L, NROW(x)), ...) {
+    # could rewrite this for non SOCP solver like gurobi
+    if ("tangent_points" %in% names(attributes(x))) {
+        Vx <- attributes(x)$tangent_points
+    } else {
+        Vx <- c(0.01, 2.95, 3.7, 4.32, 5.17, 5.51, 5.82, 6.07, 6.3, 6.72, 7.07, 7.4, 7.65, 7.89, 8.31, 8.67, 9)
+        # approx works but tangent points are garbage :/
+    }
+
+    if (is.null(weights)) {
+        wx <- x
+        wy <- y
+    } else {
+        wx <- diag(sqrt(weights)) %*% x
+        wy <- weights * y
+    }
+    n <- nrow(x); m <- ncol(x)
+    #          X          zeta   delta
+    op <- OP(c(double(m), 1, 2 * wy))
+    A <- rbind(stm(c(1, 2), c(m + 1, m + 1), c(-1, 1), ncol = m + 1 + n),
+               stm(rep(seq_len(n), m), rep(seq_len(m), each = n), -2 * drop(wx), ncol = m + 1 + n))
+    rhs <- c(1, 1, integer(n))
+    cones <- K_soc(n + 2)
+    f <- function(x) -log(x)
+    fd <- function(x) -1/x
+    tangent <- function(vk) L_constraint(cbind(-fd(vk)*drop(x), stzm(n, 1), stdm(1, n)), geq(n), rep(f(vk)-fd(vk)*vk, n))
+    constraints(op) <- rbind(C_constraint(A, cones, rhs), do.call(rbind, lapply(Vx, tangent)))
+    bounds(op) <- V_bound(ld = -Inf, nobj = ncol(A))
+    op
+}
 
 #
 # Gaussian data
@@ -251,4 +449,3 @@ loglike_gaussian_identity_SOCP <- function(x, y, weights = rep.int(1L, NROW(x)),
     bounds(op) <- V_bound(ld = -Inf, nobj = n+1)
     op
 }
-

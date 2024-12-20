@@ -52,7 +52,7 @@ If you encounter difficulties during the installation,
 
 ## Installing GUROBI
 As the **gurobi** package is commercial software, it must be obtained from [`https://www.gurobi.com`](https://www.gurobi.com/).
-The site [https://www.gurobi.com/documentation](https://www.gurobi.com/documentation/) provides installation instructions for **GUROBI** on *Windows*, *MacOS* and *Linux*.
+The site [`https://docs.gurobi.com`](https://docs.gurobi.com/) provides installation instructions for **GUROBI** on *Windows*, *MacOS* and *Linux*.
 
 ### Installing **ROI.plugin.gurobi**
 To install **ROI.plugin.gurobi**, you need to have the **gurobi** package installed.
